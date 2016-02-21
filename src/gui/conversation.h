@@ -43,6 +43,7 @@
 #include <QPaintEvent>
 #include <QRegExp>
 #include "server.h"
+#include "klfbackend.h"
 
 namespace OpenAxiom {
    // A conversation is a set of exchanges.  An exchange is a question
@@ -70,6 +71,8 @@ namespace OpenAxiom {
       // Add a new paragraph to existing texts.  Paragraghs are
       // separated by the newline character.
       void add_paragraph(const QString&);
+      // treat an image like a paragraph
+      void add_image(const QImage&);
       // Add accumulate new text.
       void add_text(const QString&);
       // Current cursor
@@ -196,6 +199,11 @@ namespace OpenAxiom {
       OutputTextArea* cur_out;
       QRegExp rx;
       QRegExp tx;
+      QRegExp dd;
+
+      KLFBackend::klfSettings settings;
+      KLFBackend::klfInput input;
+      KLFBackend::klfOutput output;
    };
 }
 

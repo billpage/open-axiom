@@ -53,7 +53,9 @@ namespace OpenAxiom {
    private slots:
       void done(int, QProcess::ExitStatus);
       void display_error();
-      
+      void open_file();
+      void save_file();
+
    private:
       Server srv;
       QTabWidget tabs;

@@ -39,6 +39,8 @@
 #include "debate.h"
 #include "main-window.h"
 
+#include "klfbackend.h"
+
 namespace OpenAxiom {
    void
    MainWindow::display_error(const std::string& s) {
@@ -60,6 +62,7 @@ namespace OpenAxiom {
    
    MainWindow::MainWindow(int argc, char* argv[])
          : srv(argc, argv), tabs(this) {
+
       setCentralWidget(&tabs);
       setWindowTitle("OpenAxiom");
       auto debate = new Debate(this);
@@ -69,7 +72,18 @@ namespace OpenAxiom {
       s.rheight() += debate->horizontalScrollBar()->width();
       resize(s);
       QMenu* file = menuBar()->addMenu(tr("&File"));
-      QAction* action = new QAction(tr("Quit"), this);
+
+      QAction* action = new QAction(tr("Open"), this);
+      file->addAction(action);
+      action->setShortcut(tr("Ctrl+O"));
+      connect(action, SIGNAL(triggered()), this, SLOT(open_file()));
+
+      action = new QAction(tr("Save"), this);
+      file->addAction(action);
+      action->setShortcut(tr("Ctrl+S"));
+      connect(action, SIGNAL(triggered()), this, SLOT(save_file()));
+
+      action = new QAction(tr("Quit"), this);
       file->addAction(action);
       action->setShortcut(tr("Ctrl+Q"));
       connect(action, SIGNAL(triggered()), this, SLOT(close()));
@@ -84,6 +98,17 @@ namespace OpenAxiom {
    }
    
    MainWindow::~MainWindow() {
+   }
+
+   void MainWindow::open_file() {
+      //  FIXME.
+      auto s = server()->readAllStandardError();
+      QMessageBox::warning(this, tr("Opened file"), QString(s));
+   }
+   void MainWindow::save_file() {
+      // FIXME.
+      auto s = server()->readAllStandardError();
+      QMessageBox::warning(this, tr("Saved File"), QString(s));
    }
 
    void MainWindow::done(int s, QProcess::ExitStatus) {

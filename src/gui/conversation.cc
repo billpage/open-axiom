@@ -35,6 +35,8 @@
 #include <sstream>
 #include <iostream>
 
+#include <QMessageBox>
+#include <QPixmap>
 #include <QScrollBar>
 #include <QApplication>
 #include "conversation.h"
@@ -104,6 +106,18 @@ namespace OpenAxiom {
       updateGeometry();
    }
 
+   void OutputTextArea::add_image(const QImage& s) {
+      //if (not document()->isEmpty())
+         get_cursor().insertBlock();
+      get_cursor().insertImage(s);
+      QSize sz = sizeHint();
+      sz.setWidth(parentWidget()->width() - our_margin(this));
+      sz.setHeight(s.height()+100);
+      resize(sz);
+      show();
+      updateGeometry();
+   }
+
    void OutputTextArea::add_text(const QString& s) {
       setPlainText(toPlainText() + s);
       QSize sz = sizeHint();
@@ -166,7 +180,7 @@ namespace OpenAxiom {
    }
 
    // The layout within an exchange is as follows:
-   //   -- input area (an editor) with its own decoation accounted for.
+   //   -- input area (an editor) with its own decoration accounted for.
    //   -- an optional spacing
    //   -- an output area with its own decoration accounted for.
    QSize Exchange::sizeHint() const {
@@ -271,6 +285,9 @@ namespace OpenAxiom {
    // Default number of characters per question line.
    const int columns = 80;
    const int lines = 40;
+   // output tex
+   auto tex = false;
+   QString texbuf = "";
 
    static QSize
    minimum_preferred_size(const Conversation* conv) {
@@ -287,11 +304,20 @@ namespace OpenAxiom {
            cur_ex(),
            cur_out(&greatings),
            rx("\\(\\d+\\)\\s->"),
-           tx("\\sType: ") {
+           tx("\\sType: "),
+           dd("\\$\\$") {
       setFont(monospace_font());
       setBackgroundRole(QPalette::Base);
       greatings.setFont(font());
       setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
+      if(!KLFBackend::detectSettings(&settings)) {
+          qDebug() << "unable to find LaTeX in default directories.";
+      } else {
+          qDebug() << "default settings working!";
+      }
+      input.mathmode = "\\[ ... \\]";
+      input.dpi = 150;
+      input.preamble = QString("\\usepackage{amssymb,amsmath,mathrsfs}");
    }
 
    Conversation::~Conversation() {
@@ -387,11 +413,32 @@ namespace OpenAxiom {
             prompt = s;
             continue;
          }
+         auto dpos = dd.indexIn(s);
+         if (dpos != -1) {
+            if (tex) {
+                //cur_out->add_paragraph(texbuf);
+                input.latex = texbuf;
+                output = KLFBackend::getLatexFormula(input, settings);
+                if (output.status != 0) {
+                     QMessageBox::critical(this, "Latex error", output.errorstr);
+                     cur_out->add_paragraph(texbuf);
+                }
+                else
+                     cur_out->add_image(output.result);
+                texbuf = "";
+            }
+            tex = not tex;
+            continue;
+         }
+
          auto tpos = tx.indexIn(s);
          if (tpos != -1)
             display_type(cur_out, s, tpos + tx.matchedLength());
          else
-            cur_out->add_paragraph(s);
+            if (tex)
+               texbuf += s + "\n";
+            else
+               cur_out->add_paragraph(s);
       }
       if (length() == 0) {
          if (not empty_string(prompt))
@@ -406,7 +453,7 @@ namespace OpenAxiom {
          else {
             ensure_visibility(debate(), next(exchange()));
             QApplication::restoreOverrideCursor();
-	 }
+         }
       }
    }
 }

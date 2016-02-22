@@ -19500,7 +19500,7 @@ ac_config_files="$ac_config_files src/graph/viewAlone/Makefile:config/var-def.mk
 
 ac_config_files="$ac_config_files src/graph/viewman/Makefile:config/var-def.mk:src/graph/viewman/Makefile.in:config/setup-dep.mk"
 
-ac_config_files="$ac_config_files src/gui/gui.pro"
+ac_config_files="$ac_config_files src/gui/gui.pro src/klfbackend/KLFBackend.pro"
 
 
 ac_config_links="$ac_config_links ${target}/include/open-axiom/config:config/openaxiom-c-macros.h"
@@ -20687,6 +20687,7 @@ do
     "src/graph/viewAlone/Makefile") CONFIG_FILES="$CONFIG_FILES src/graph/viewAlone/Makefile:config/var-def.mk:src/graph/viewAlone/Makefile.in:config/setup-dep.mk" ;;
     "src/graph/viewman/Makefile") CONFIG_FILES="$CONFIG_FILES src/graph/viewman/Makefile:config/var-def.mk:src/graph/viewman/Makefile.in:config/setup-dep.mk" ;;
     "src/gui/gui.pro") CONFIG_FILES="$CONFIG_FILES src/gui/gui.pro" ;;
+    "src/klfbackend/KLFBackend.pro") CONFIG_FILES="$CONFIG_FILES src/klfbackend/KLFBackend.pro" ;;
     "${target}/include/open-axiom/config") CONFIG_LINKS="$CONFIG_LINKS ${target}/include/open-axiom/config:config/openaxiom-c-macros.h" ;;
 
   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;
@@ -22261,6 +22262,7 @@ if test x$oa_has_qt = xyes; then
          ;;
   esac
   (cd src/gui && $OA_QT_QMAKE -makefile $oa_qmake_spec gui.pro)
+  (cd src/klfbackend && $OA_QT_QMAKE -makefile $oa_qmake_spec KLFBackend.pro)
 fi
 
 ## Generate rules to extrad SPAD type definitions from pamphlets.

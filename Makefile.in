@@ -155,7 +155,8 @@ CONFIG_CLEAN_FILES = src/lib/Makefile src/hyper/Makefile \
 	src/graph/Makefile src/graph/Gdraws/Makefile \
 	src/graph/view2D/Makefile src/graph/view3D/Makefile \
 	src/graph/viewAlone/Makefile src/graph/viewman/Makefile \
-	src/gui/gui.pro ${target}/include/open-axiom/config
+	src/gui/gui.pro src/klfbackend/KLFBackend.pro \
+	${target}/include/open-axiom/config
 CONFIG_CLEAN_VPATH_FILES =
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
@@ -235,6 +236,7 @@ am__DIST_COMMON = $(srcdir)/Makefile.in $(top_srcdir)/config/compile \
 	$(top_srcdir)/src/hyper/Makefile.in \
 	$(top_srcdir)/src/input/Makefile.in \
 	$(top_srcdir)/src/interp/Makefile.in \
+	$(top_srcdir)/src/klfbackend/KLFBackend.pro.in \
 	$(top_srcdir)/src/lib/Makefile.in \
 	$(top_srcdir)/src/lisp/Makefile.in \
 	$(top_srcdir)/src/share/Makefile.in \
@@ -493,6 +495,7 @@ OA_SRC_TARGETS = \
 	all-clef \
 	all-doc \
 	all-graph \
+	all-klfbackend \
 	all-gui \
 	all-hyper \
 	all-input \
@@ -591,6 +594,8 @@ src/graph/viewAlone/Makefile: $(top_builddir)/config.status $(top_srcdir)/config
 src/graph/viewman/Makefile: $(top_builddir)/config.status $(top_srcdir)/config/var-def.mk $(top_srcdir)/src/graph/viewman/Makefile.in $(top_srcdir)/config/setup-dep.mk
 	cd $(top_builddir) && $(SHELL) ./config.status $@
 src/gui/gui.pro: $(top_builddir)/config.status $(top_srcdir)/src/gui/gui.pro.in
+	cd $(top_builddir) && $(SHELL) ./config.status $@
+src/klfbackend/KLFBackend.pro: $(top_builddir)/config.status $(top_srcdir)/src/klfbackend/KLFBackend.pro.in
 	cd $(top_builddir) && $(SHELL) ./config.status $@
 
 mostlyclean-libtool:

@@ -8,6 +8,10 @@ oa_targetdir = @top_builddir@/@target@
 OA_INC = $${oa_targetdir}/include
 OA_LIB = -L@top_builddir@/@target@/lib -lOpenAxiom
 
+KLF_INC = @srcdir@/../klfbackend
+KLF_LIB = -L@top_builddir@/@target@/lib/klfbackend -lKLFBackend
+
+
 ## We build in release mode.
 CONFIG += release
 ## But, don't think we want an app bundle, yet.
@@ -51,12 +55,14 @@ INCLUDEPATH +=  @srcdir@
 INCLUDEPATH += @top_srcdir@/src/include
 INCLUDEPATH += @top_builddir@/config
 DEPENDPATH += @srcdir@
+INCLUDEPATH += $$KLF_INC
 
 ## Source files
 SOURCES += server.cc conversation.cc main-window.cc debate.cc main.cc
 
 ## Additional support libraries
 LIBS += $$OA_LIB
+LIBS += $$KLF_LIB
 
 ## C++ compiler
 QMAKE_CXX = @CXX@

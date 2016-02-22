@@ -1,0 +1,46 @@
+## Copyright (C) 2011-2013 Gabriel Dos Reis.
+## All rights reserved.
+## Autoconf template file for the benefit of QMake 
+## Written by Bill Page.
+
+oa_targetdir = @top_builddir@/@target@
+## We build in release mode.
+CONFIG += release
+
+QT       += core gui widgets
+
+# KLF backend versions
+KLF_BACKEND_VERSION = 3.2.8
+
+DEFINES +=KLF_VERSION_STRING=\\\"$$KLF_BACKEND_VERSION\\\" \
+        KLF_SRC_BUILD
+
+DESTDIR = $${oa_targetdir}/lib
+
+TARGET = KLFBackend
+TEMPLATE = lib
+
+## Tell QT that sources are not in the build directory
+VPATH += @srcdir@
+
+SOURCES += klfbackend.cpp \
+    klfdebug.cpp \
+    klfblockprocess.cpp \
+    klfdefs.cpp \
+    klfpreviewbuilderthread.cpp
+
+HEADERS += klfbackend.h \
+    klfqt34common.h \
+    klfdefs.h \
+    klfdebug.h \
+    klfblockprocess.h \
+    klfpreviewbuilderthread.h
+
+unix:!symbian {
+    maemo5 {
+        target.path = /opt/usr/lib
+    } else {
+        target.path = /usr/lib
+    }
+    INSTALLS += target
+}

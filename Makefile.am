@@ -63,6 +63,7 @@ OA_SRC_TARGETS = \
 	all-clef \
 	all-doc \
 	all-graph \
+	all-klfbackend \
 	all-gui \
 	all-hyper \
 	all-input \

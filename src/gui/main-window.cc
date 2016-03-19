@@ -33,13 +33,15 @@
 #include <QMenuBar>
 #include <QAction>
 #include <QApplication>
+#include <QTimer>
+#include <QThread>
 #include <QMessageBox>
 #include <QScrollBar>
 
 #include "debate.h"
 #include "main-window.h"
 
-#include "klfbackend.h"
+#include "latexthread.h"
 
 namespace OpenAxiom {
    void
@@ -55,11 +57,10 @@ namespace OpenAxiom {
    static void connect_server_io(MainWindow* win, Debate* debate) {
       QObject::connect(win->server(), SIGNAL(readyReadStandardError()),
                        win, SLOT(display_error()));
-      QObject::connect(win->server(), SIGNAL(readyReadStandardOutput()),
+      QObject::connect( win->server(), SIGNAL(readyReadStandardOutput()),
                        debate->exchanges(), SLOT(read_reply()));
    }
 
-   
    MainWindow::MainWindow(int argc, char* argv[])
          : srv(argc, argv), tabs(this) {
 
@@ -88,15 +89,20 @@ namespace OpenAxiom {
       action->setShortcut(tr("Ctrl+Q"));
       connect(action, SIGNAL(triggered()), this, SLOT(close()));
 
-      connect_server_io(this, debate);
-      server()->launch();
+      latexthread = new LatexThread();
+      connect(latexthread, SIGNAL(error(const std::string&)), this, SLOT(display_error(const std::string&)));
+      connect(latexthread, SIGNAL(got_image(QImage, OutputTextArea*, int)), debate->exchanges(), SLOT(add_image(QImage, OutputTextArea*, int)));
+      latexthread->start();
+
       // When invoked in a --role=server mode, OpenAxiom would
       // wait to be pinged before displaying a prompt.  This is
       // an unfortunate result of a rather awkward hack.
-      server()->input("");
+      server()->launch();
       read_databases();
+      connect_server_io(this, debate);
+      server()->input(")read init.input )quiet");
    }
-   
+
    MainWindow::~MainWindow() {
    }
 

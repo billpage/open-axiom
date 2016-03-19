@@ -36,11 +36,17 @@
 #include <iostream>
 
 #include <QMessageBox>
-#include <QPixmap>
+#include <QUuid>
+#include <QUrl>
+#include <QTextFrame>
+#include <QTextBlockFormat>
+#include <QAbstractTextDocumentLayout>
 #include <QScrollBar>
 #include <QApplication>
+#include <QKeyEvent>
 #include "conversation.h"
 #include "debate.h"
+#include "latexthread.h"
 
 namespace OpenAxiom {
    // Largest width and line spacing, in pixel, of the font metrics
@@ -64,7 +70,7 @@ namespace OpenAxiom {
    
    // Return a resonable margin for this frame.
    static int our_margin(const QFrame* f) {
-      return 2 + f->frameWidth();
+      return 2 + f->frameWidth() + 5;
    }
 
    // --------------------
@@ -75,9 +81,10 @@ namespace OpenAxiom {
       get_cursor().movePosition(QTextCursor::End);
       setReadOnly(true);          // this is a output only area.
       setLineWrapMode(NoWrap);    // for the time being, mess with nothing.
+      setAcceptRichText(false);
       setFont(p->font());
       setViewportMargins(0, 0, 0, 0);
-      setSizePolicy(QSizePolicy::Preferred, QSizePolicy::MinimumExpanding);
+      setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
       // We do not want to see scroll bars.  Usually disallowing vertical
       // scroll bars and allocating enough horizontal space is sufficient
       // to ensure that we don't see any horizontal scrollbar.
@@ -85,78 +92,80 @@ namespace OpenAxiom {
       setLineWidth(1);
    }
 
-   // This overriding implementation is so that we can control the
-   // amount of vertical space in the read-only editor viewport allocated
-   // for the display of output text.  In particular we do not want
-   // scrollbars.
-   QSize
-   OutputTextArea::sizeHint() const {
-      const QSize s = font_units(this);
-      return QSize(width(), (1 + document()->lineCount()) * s.height());
-   }
-
-   void OutputTextArea::add_paragraph(const QString& s) {
-      if (not document()->isEmpty())
-         get_cursor().insertBlock();
+   void OutputTextArea::align_left(const QString& s) {
+      if (not document()->isEmpty()) {
+          QTextBlockFormat blockFmt;
+          blockFmt.setAlignment(Qt::AlignLeft);
+          get_cursor().insertBlock(blockFmt);
+      }
       get_cursor().insertText(s);
-      QSize sz = sizeHint();
-      sz.setWidth(parentWidget()->width() - our_margin(this));
-      resize(sz);
-      show();
-      updateGeometry();
+      resize(parentWidget()->width() - 2*our_margin(this),document()->size().height());
    }
 
-   void OutputTextArea::add_image(const QImage& s) {
-      //if (not document()->isEmpty())
-         get_cursor().insertBlock();
-      get_cursor().insertImage(s);
-      QSize sz = sizeHint();
-      sz.setWidth(parentWidget()->width() - our_margin(this));
-      sz.setHeight(s.height()+100);
-      resize(sz);
-      show();
-      updateGeometry();
+   void OutputTextArea::align_right(const QString& s,const QTextCharFormat f) {
+      QTextBlockFormat blockFmt;
+      blockFmt.setAlignment(Qt::AlignRight);
+      get_cursor().insertBlock(blockFmt);
+      get_cursor().insertText(s,f);
+      resize(parentWidget()->width() - 2*our_margin(this),document()->size().height());
    }
 
-   void OutputTextArea::add_text(const QString& s) {
-      setPlainText(toPlainText() + s);
-      QSize sz = sizeHint();
-      const int w = parentWidget()->width() - 2 * frameWidth();
-      if (w > sz.width())
-         sz.setWidth(w);
-      resize(sz);
-      show();
-      updateGeometry();
-   }
-
-   OutputTextArea&
-   OutputTextArea::insert_block(const QString& s) {
-      if (not document()->isEmpty())
-         get_cursor().insertBlock();
-      get_cursor().insertText(s);
-      resize(sizeHint());
-      updateGeometry();
-      return *this;
+   // called from LatexThread signal
+   void OutputTextArea::add_image(OutputTextArea *where, int pos, const QImage& s) {
+      where->get_cursor().setPosition(pos);
+      where->get_cursor().deletePreviousChar(); // marker
+      where->get_cursor().insertImage(s);
+      where->resize(parentWidget()->width() - 2*our_margin(where),where->document()->size().height());
    }
 
    // --------------
    // -- Question --
    // --------------
-   Question::Question(Exchange* e) : QLineEdit(e) {
+   Question::Question(Exchange* e) : QTextEdit(e) {
       setBackgroundRole(QPalette::AlternateBase);
-      setFrame(true);
+      setFrameStyle(Box|Sunken);
+      setLineWrapMode(NoWrap);
+      setFont(e->font());
+      setViewportMargins(0, 0, 0, 0);
+      setSizePolicy(QSizePolicy::Preferred, QSizePolicy::MinimumExpanding);
+      setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+      setLineWidth(1);
+      cur_height = 0;
+      tmp.setFileTemplate("/tmp/axiomXXXXXX.input");
+      if (not tmp.open()) qDebug() << "Couldn't open tmp file.";
+      tmp.setAutoRemove(true);
+      connect(this, SIGNAL(textChanged()), this, SLOT(checkSize()));
+   }
+
+   void Question::checkSize() {
+       if (document()->size().height()==cur_height) return;
+       cur_height = document()->size().height();
+       adjustSize();
+       parentWidget()->adjustSize();
+   }
+
+   QSize Question::sizeHint() const {
+      return QSize(width(), document()->size().height());
    }
 
    void Question::focusInEvent(QFocusEvent* e) {
-      setFrame(true);
-      update();
-      QLineEdit::focusInEvent(e);
+      QTextEdit::focusInEvent(e);
    }
 
    void Question::enterEvent(QEvent* e) {
-      setFrame(true);
-      update();
-      QLineEdit::enterEvent(e);
+      QTextEdit::enterEvent(e);
+   }
+
+   void Question::keyPressEvent ( QKeyEvent* event ) {
+     if(event->key() == Qt::Key_Return) {
+         if (event->modifiers()&Qt::ShiftModifier) {
+             emit returnPressed();
+         } else {
+             QTextEdit::keyPressEvent( new QKeyEvent(QEvent::KeyPress, Qt::Key_Return,0) );
+         }
+         event->accept();
+     } else
+         QTextEdit::keyPressEvent( event );
    }
 
    // ------------
@@ -164,6 +173,7 @@ namespace OpenAxiom {
    // ------------
    Answer::Answer(Exchange* e) : OutputTextArea(e) {
       setFrameStyle(StyledPanel | Raised);
+      hide();
    }
 
    // --------------
@@ -185,24 +195,14 @@ namespace OpenAxiom {
    //   -- an output area with its own decoration accounted for.
    QSize Exchange::sizeHint() const {
       const int m = our_margin(this);
-      QSize sz = question()->size() + QSize(2 * m, 2 * m);
+      QSize sz = QSize(parentWidget()->width() - 2 * m, 2 * m+question()->height());
       if (not answer()->isHidden())
-         sz.rheight() += answer()->height() + spacing;
+         sz.rheight() += answer()->document()->size().height() + spacing;
       return sz;
    }
 
    Server* Exchange::server() const {
       return win->debate()->server();
-   }
-
-   // Dress the query area with initial properties.
-   static void
-   prepare_query_widget(Conversation* conv, Exchange* e) {
-      Question* q = e->question();
-      q->setFrame(false);
-      q->setFont(conv->font());
-      const int m = our_margin(e);
-      q->setGeometry(m, m, conv->width() - 2 * m, q->height());
    }
 
    // Dress the reply aread with initial properties.
@@ -215,24 +215,15 @@ namespace OpenAxiom {
       const QPoint pt = e->question()->geometry().bottomLeft();
       const int m = our_margin(a);
       a->setGeometry(pt.x(), pt.y() + spacing, 
-		     conv->width() - 2 * m, q->height());
+             conv->width() - 2 * m, q->height());
       a->setBackgroundRole(q->backgroundRole());
-      a->hide();                // nothing to show yet
    }
 
-   static void
-   finish_exchange_make_up(Conversation* conv, Exchange* e) {
-      e->setAutoFillBackground(true);
-      e->move(conv->bottom_left());
-   }
-   
    Exchange::Exchange(Conversation* conv, int n)
          : QFrame(conv), win(conv), no(n), query(this), reply(this) {
       setLineWidth(1);
       setFont(conv->font());
-      prepare_query_widget(conv, this);
-      prepare_reply_widget(conv, this);
-      finish_exchange_make_up(conv, this);
+      move(conv->bottom_left());
       connect(question(), SIGNAL(returnPressed()),
               this, SLOT(reply_to_query()));
    }
@@ -251,12 +242,16 @@ namespace OpenAxiom {
    
    void
    Exchange::reply_to_query() {
-      QString input = question()->text().trimmed();
+      QString input = question()->toPlainText();
       if (empty_string(input))
          return;
+      question()->file()->write(input.toAscii());
+      question()->file()->flush();
+      input = ")read " + question()->file()->fileName() + " )quiet";
+
       question()->setReadOnly(true); // Make query area read only.
       question()->clearFocus();
-      question()->setFocusPolicy(Qt::NoFocus);
+      prepare_reply_widget(win, this);
       server()->input(input);
       QApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
    }
@@ -264,17 +259,18 @@ namespace OpenAxiom {
    void Exchange::resizeEvent(QResizeEvent* e) {
       QFrame::resizeEvent(e);
       const int w = width() - 2 * our_margin(this);
-      if (w > question()->width()) {
+      // (w > question()->width()) {
          question()->resize(w, question()->height());
          answer()->resize(w, answer()->height());
-      }
+      //
    }
 
    // ------------
    // -- Banner --
    // ------------
    Banner::Banner(Conversation* conv) :  Base(conv) {
-      setFrameStyle(StyledPanel | Raised);
+      //setFrameStyle(StyledPanel | Raised);
+      setFrameStyle(StyledPanel);
       setBackgroundRole(QPalette::Base);
    }
 
@@ -287,7 +283,10 @@ namespace OpenAxiom {
    const int lines = 40;
    // output tex
    auto tex = false;
+   QString buf = "";
    QString texbuf = "";
+   QString prompt = "";
+   QString type = "";
 
    static QSize
    minimum_preferred_size(const Conversation* conv) {
@@ -297,27 +296,20 @@ namespace OpenAxiom {
 
    // Set a minimum preferred widget size, so no layout manager
    // messes with it.  Indicate we can make use of more space.
+
    Conversation::Conversation(Debate* d)
          : QWidget(d),
            win(d),
-           greatings(this),
+           greetings(this),
            cur_ex(),
-           cur_out(&greatings),
+           cur_out(&greetings),
            rx("\\(\\d+\\)\\s->"),
            tx("\\sType: "),
-           dd("\\$\\$") {
+           dd("^\\$\\$") {
       setFont(monospace_font());
       setBackgroundRole(QPalette::Base);
-      greatings.setFont(font());
-      setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
-      if(!KLFBackend::detectSettings(&settings)) {
-          qDebug() << "unable to find LaTeX in default directories.";
-      } else {
-          qDebug() << "default settings working!";
-      }
-      input.mathmode = "\\[ ... \\]";
-      input.dpi = 150;
-      input.preamble = QString("\\usepackage{amssymb,amsmath,mathrsfs}");
+      greetings.setFont(font());
+      setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Expanding);
    }
 
    Conversation::~Conversation() {
@@ -327,7 +319,7 @@ namespace OpenAxiom {
 
    QPoint Conversation::bottom_left() const {
       if (length() == 0)
-         return greatings.geometry().bottomLeft();
+         return greetings.geometry().bottomLeft();
       return children.back()->geometry().bottomLeft();
    }
 
@@ -344,7 +336,7 @@ namespace OpenAxiom {
       if (n == 0)
          return minimum_preferred_size(this);
       const int view_height = debate()->viewport()->height();
-      QSize sz = greatings.size();
+      QSize sz = greetings.size();
       for (int i = 0; i < n; ++i)
          sz.rheight() += children[i]->height();
       return round_up_height(sz, view_height);
@@ -356,7 +348,7 @@ namespace OpenAxiom {
       const QSize sz = size();
       if (e->oldSize() == sz)
          return;
-      greatings.resize(sz.width(), greatings.height());
+      greetings.resize(sz.width(), greetings.height());
       for (int i = 0; i < length(); ++i) {
          Exchange* e = children[i];
          e->resize(sz.width(), e->height());
@@ -366,7 +358,7 @@ namespace OpenAxiom {
    void Conversation::paintEvent(QPaintEvent* e) {
       QWidget::paintEvent(e);
       if (length() == 0)
-         greatings.update();
+         greetings.update();
    }
 
    Exchange*
@@ -395,65 +387,75 @@ namespace OpenAxiom {
       return format;
    }
 
-   static void
-   display_type(OutputTextArea* area, QString& text, int n) {
-      area->insert_block(QString(n, ' '));
-      area->get_cursor().insertText(text.mid(n), get_type_format(area));
-      area->resize(area->sizeHint());
-      area->updateGeometry();
+   void Conversation::add_image(const QImage& s, OutputTextArea* area, int pos) {
+       cur_out->add_image(area,pos,s);
    }
 
    void
    Conversation::read_reply() {
-      auto data = debate()->server()->readAll();
-      QStringList strs = QString::fromLocal8Bit(data).split('\n');
-      QString prompt;
-      for (auto& s : strs) {
-         if (rx.indexIn(s) != -1) {
-            prompt = s;
-            continue;
-         }
-         auto dpos = dd.indexIn(s);
-         if (dpos != -1) {
-            if (tex) {
-                //cur_out->add_paragraph(texbuf);
-                input.latex = texbuf;
-                output = KLFBackend::getLatexFormula(input, settings);
-                if (output.status != 0) {
-                     QMessageBox::critical(this, "Latex error", output.errorstr);
-                     cur_out->add_paragraph(texbuf);
-                }
-                else
-                     cur_out->add_image(output.result);
-                texbuf = "";
-            }
-            tex = not tex;
-            continue;
-         }
+       auto data = debate()->server()->readAll();
+       buf.append(QString::fromLocal8Bit(data));
+       if (rx.indexIn(buf) == -1) return;
+       // Found prompt, start processing
+       QStringList strs = buf.split('\n');
+       buf = "";
+       for (auto& s : strs) {
+           if (rx.indexIn(s) != -1) {
+               prompt = s;
+               continue;
+           }
+           auto dpos = dd.indexIn(s);
+           if (dpos != -1) {
+               if (tex) {
+                   // Although single-threaded, getLatexFormula will yield to other QT signals
+                   cur_out->align_left(".");
+                   debate()->latex()->process(texbuf,cur_out);
+                   texbuf = "";
+                   tex = false;
+               }
+               else {
+                   tex = true;
+               }
+               continue;
+           }
+           auto tpos = tx.indexIn(s);
+           if (tpos != -1) {
+               type = s.mid(tpos+tx.matchedLength());
+               cur_out->align_right(type, get_type_format(cur_out));
+               continue;
+           } else
+               if (tex)
+                   texbuf += s + "\n";
+               else
+                   cur_out->align_left(s);
+           cur_out->update();
+       }
+       debate()->latex()->wait();
 
-         auto tpos = tx.indexIn(s);
-         if (tpos != -1)
-            display_type(cur_out, s, tpos + tx.matchedLength());
-         else
-            if (tex)
-               texbuf += s + "\n";
-            else
-               cur_out->add_paragraph(s);
-      }
-      if (length() == 0) {
-         if (not empty_string(prompt))
-            ensure_visibility(debate(), new_topic());
-      }
-      else {
-         exchange()->adjustSize();
-         exchange()->update();
-         exchange()->updateGeometry();
-         if (empty_string(prompt))
-            ensure_visibility(debate(), exchange());
-         else {
-            ensure_visibility(debate(), next(exchange()));
-            QApplication::restoreOverrideCursor();
-         }
-      }
+       if (not empty_string(type)) {
+           type = "";
+       }
+       QApplication::processEvents();
+       cur_out->show();
+       cur_out->resize(cur_out->document()->size().width(),cur_out->document()->size().height());
+       if (length() == 0) {
+           if (not empty_string(prompt)) {
+               prompt = "";
+               ensure_visibility(debate(), new_topic());
+           }
+       }
+       else {
+           exchange()->adjustSize();
+           //exchange()->update();
+           //exchange()->updateGeometry();
+           if (not empty_string(prompt)) {
+               prompt = "";
+               ensure_visibility(debate(), next(exchange()));
+               QApplication::restoreOverrideCursor();
+           }
+           else {
+               ensure_visibility(debate(), exchange());
+           }
+       }
    }
 }

@@ -39,6 +39,7 @@
 #include <QResizeEvent>
 #include "open-axiom.h"
 #include "conversation.h"
+#include "latexthread.h"
 
 namespace OpenAxiom {
    
@@ -50,6 +51,7 @@ namespace OpenAxiom {
 
       Conversation* exchanges() { return &conv; }
       Server* server() const;
+      LatexThread* latex() const;
 
    private:
       MainWindow* const win;

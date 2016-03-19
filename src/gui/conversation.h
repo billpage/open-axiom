@@ -34,8 +34,11 @@
 #define OPENAXIOM_CONVERSATION_INCLUDED
 
 #include <vector>
+#include <queue>
 #include <QFrame>
 #include <QLineEdit>
+#include <QPlainTextEdit>
+#include <QTemporaryFile>
 #include <QTextEdit>
 #include <QFont>
 #include <QEvent>
@@ -44,6 +47,7 @@
 #include <QRegExp>
 #include "server.h"
 #include "klfbackend.h"
+#include "klfblockprocess.h"
 
 namespace OpenAxiom {
    // A conversation is a set of exchanges.  An exchange is a question
@@ -54,6 +58,7 @@ namespace OpenAxiom {
    class Exchange;
    class Question;
    class Answer;
+   class OutputTextArea;
 
    class MainWindow;
 
@@ -61,23 +66,30 @@ namespace OpenAxiom {
    // -- OutputTextArea --
    // --------------------
    // An output text area is a widget where we output text.
-   // The texts are accumulated, as opposed to overwritten.
+   // The texts are accumulated, as opposed to overwritten
+   // including delayed subsitution of LaTeX generated images.
+   struct Substition {
+       int height;
+       OutputTextArea* area;
+       int pos;
+   };
+
+   typedef std::queue<Substition> Pending;
+
    class OutputTextArea : public QTextEdit {
       typedef QTextEdit Base;
    public:
       explicit OutputTextArea(QWidget*);
       // the metrics of this output area
-      QSize sizeHint() const;
+      // QSize sizeHint() const;
       // Add a new paragraph to existing texts.  Paragraghs are
       // separated by the newline character.
-      void add_paragraph(const QString&);
-      // treat an image like a paragraph
-      void add_image(const QImage&);
-      // Add accumulate new text.
-      void add_text(const QString&);
+      void align_left(const QString&);
+      void align_right(const QString&, const QTextCharFormat);
+      void add_image(OutputTextArea *where, int pos, const QImage& s);
       // Current cursor
       QTextCursor& get_cursor() { return cur; }
-      OutputTextArea& insert_block(const QString&);
+      QTextCursor& set_cursor(QTextCursor new_cur) { cur = new_cur; return cur; }
    protected:
       QTextCursor cur;
    };
@@ -85,19 +97,36 @@ namespace OpenAxiom {
    // ---------------
    // -- Question --
    // ---------------
-   // A question is just a one-liner query area.
-   struct Question : QLineEdit {
+   // A question is a multi-line query area.
+   class Question : public QTextEdit {
+       Q_OBJECT
+   public:
       explicit Question(Exchange*);
+      QSize sizeHint() const;
+      QTemporaryFile* file() { return &tmp; }
+
+   signals:
+       void returnPressed();
+
+   private slots:
+       void checkSize();
 
    protected:
       void enterEvent(QEvent*);
       void focusInEvent(QFocusEvent*);
+      void keyPressEvent ( QKeyEvent * event );
+
+   private:
+      int cur_height;
+      QTemporaryFile tmp;
    };
 
    // ------------
    // -- Answer --
    // ------------
-   struct Answer : OutputTextArea {
+   class Answer : public OutputTextArea {
+      Q_OBJECT
+   public:
       explicit Answer(Exchange*);
    };
 
@@ -105,7 +134,7 @@ namespace OpenAxiom {
    // -- Exchange --
    // --------------
    class Exchange : public QFrame {
-      Q_OBJECT;
+      Q_OBJECT
    public:
       Exchange(Conversation*, int);
 
@@ -118,7 +147,7 @@ namespace OpenAxiom {
       Answer* answer() { return &reply; }
       const Answer* answer() const { return &reply; }
 
-      // Conversion number
+      // Conversation number
       int number() const { return no; }
 
       // Reimplement position management.
@@ -126,9 +155,9 @@ namespace OpenAxiom {
 
    protected:
       void resizeEvent(QResizeEvent*);
+      Conversation* const win;
 
    private:
-      Conversation* const win;
       const int no;
       Question query;
       Answer reply;
@@ -137,7 +166,7 @@ namespace OpenAxiom {
       void reply_to_query();
    };
 
-   // Conversation banner, welcome greatings.
+   // Conversation banner, welcome greetings.
    class Banner : public OutputTextArea {
       typedef OutputTextArea Base;
    public:
@@ -179,10 +208,13 @@ namespace OpenAxiom {
       // Return a pointer to the current exchange, if any.
       Exchange* exchange() { return cur_ex; }
 
+      void process_reply(QByteArray data);
+
    public slots:
       // Return the topic following a given topic in this set of conversations
       Exchange* next(Exchange*);
-      
+      void add_image(const QImage& s, OutputTextArea *area, int pos);
+
    protected:
       void resizeEvent(QResizeEvent*);
       void paintEvent(QPaintEvent*);
@@ -193,7 +225,7 @@ namespace OpenAxiom {
    private:
       typedef std::vector<Exchange*> Children;
       Debate* const win;
-      Banner greatings;
+      Banner greetings;
       Children children;
       Exchange* cur_ex;
       OutputTextArea* cur_out;

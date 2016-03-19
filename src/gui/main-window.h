@@ -38,6 +38,7 @@
 #include "open-axiom.h"
 #include "server.h"
 #include "debate.h"
+#include "latexthread.h"
 
 namespace OpenAxiom {
    // -- Main application window --
@@ -48,10 +49,13 @@ namespace OpenAxiom {
       ~MainWindow();
 
       Server* server() { return &srv; }
-      void display_error(const std::string&);
+      LatexThread* latexthread;
+
+   public slots:
 
    private slots:
       void done(int, QProcess::ExitStatus);
+      void display_error(const std::string&);
       void display_error();
       void open_file();
       void save_file();
@@ -59,7 +63,6 @@ namespace OpenAxiom {
    private:
       Server srv;
       QTabWidget tabs;
-
       void read_databases();
    };
 }

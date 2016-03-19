@@ -33,7 +33,7 @@
 KLFBlockProcess::KLFBlockProcess(QObject *p)  : QProcess(p)
 {
 #ifdef KLFBACKEND_QT4
-  mProcessAppEvents = true;
+  mProcessAppEvents = false;
   connect(this, SIGNAL(finished(int, QProcess::ExitStatus)), this, SLOT(ourProcExited()));
 #else
   connect(this, SIGNAL(wroteToStdin()), this, SLOT(ourProcGotOurStdinData()));
@@ -163,7 +163,7 @@ bool KLFBlockProcess::startProcess(QStringList cmd, QByteArray stdindata, QStrin
   klfDbg("Process should have finished now.");
 #else
   while (_runstatus == 0) {
-    qApp->processEvents(QEventLoop::ExcludeUserInput);
+    qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
   }
 #endif
 

@@ -774,11 +774,8 @@ all-clef: all-lib
 all-sman: all-lib all-driver
 	cd sman && $(MAKE) $(AM_MAKEFLAGS) $@
 
-all-gui: all-driver all-utils all-rt all-klfbackend
+all-gui: all-driver all-utils all-rt
 	cd gui && $(MAKE) $(AM_MAKEFLAGS)
-
-all-klfbackend:
-	cd klfbackend && $(MAKE) $(AM_MAKEFLAGS)
 
 all-hyper: all-lib all-utils
 	cd hyper && $(MAKE) $(AM_MAKEFLAGS) $@

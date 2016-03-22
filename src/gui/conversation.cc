@@ -70,7 +70,7 @@ namespace OpenAxiom {
    
    // Return a resonable margin for this frame.
    static int our_margin(const QFrame* f) {
-      return 2 + f->frameWidth() + 5;
+      return 2 + f->frameWidth() + 8;
    }
 
    // --------------------
@@ -80,11 +80,11 @@ namespace OpenAxiom {
          : Base(p), cur(document()) {
       get_cursor().movePosition(QTextCursor::End);
       setReadOnly(true);          // this is a output only area.
-      setLineWrapMode(NoWrap);    // for the time being, mess with nothing.
+      //setLineWrapMode(NoWrap);    // for the time being, mess with nothing.
       setAcceptRichText(false);
       setFont(p->font());
       setViewportMargins(0, 0, 0, 0);
-      setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
+      setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding);
       // We do not want to see scroll bars.  Usually disallowing vertical
       // scroll bars and allocating enough horizontal space is sufficient
       // to ensure that we don't see any horizontal scrollbar.
@@ -124,10 +124,10 @@ namespace OpenAxiom {
    Question::Question(Exchange* e) : QTextEdit(e) {
       setBackgroundRole(QPalette::AlternateBase);
       setFrameStyle(Box|Sunken);
-      setLineWrapMode(NoWrap);
+      //setLineWrapMode(NoWrap);
       setFont(e->font());
       setViewportMargins(0, 0, 0, 0);
-      setSizePolicy(QSizePolicy::Preferred, QSizePolicy::MinimumExpanding);
+      setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding);
       setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
       setLineWidth(1);
       cur_height = 0;
@@ -258,6 +258,8 @@ namespace OpenAxiom {
 
    void Exchange::resizeEvent(QResizeEvent* e) {
       QFrame::resizeEvent(e);
+      auto sz=size();
+      //qDebug()<<"Exchange::resizeEvent"<< sz;
       const int w = width() - 2 * our_margin(this);
       // (w > question()->width()) {
          question()->resize(w, question()->height());
@@ -309,7 +311,7 @@ namespace OpenAxiom {
       setFont(monospace_font());
       setBackgroundRole(QPalette::Base);
       greetings.setFont(font());
-      setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Expanding);
+      setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
    }
 
    Conversation::~Conversation() {
@@ -348,11 +350,20 @@ namespace OpenAxiom {
       const QSize sz = size();
       if (e->oldSize() == sz)
          return;
-      greetings.resize(sz.width(), greetings.height());
-      for (int i = 0; i < length(); ++i) {
-         Exchange* e = children[i];
-         e->resize(sz.width(), e->height());
-      }
+      //qDebug()<<"Conversation::resizeEvent"<<sz;
+      //greetings.resize(sz.width(), greetings.height());
+      //for (int i = 0; i < length(); ++i) {
+      //   Exchange* e = children[i];
+      //   e->resize(sz.width(), e->height());
+      //}
+   }
+
+   void Conversation::resize_me2(QSize sz) {
+       greetings.resize(sz.width(), greetings.height());
+       for (int i = 0; i < length(); ++i) {
+          Exchange* e = children[i];
+          e->resize(sz.width(), e->height());
+       }
    }
 
    void Conversation::paintEvent(QPaintEvent* e) {

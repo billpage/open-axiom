@@ -8,8 +8,10 @@ oa_targetdir = @top_builddir@/@target@
 OA_INC = $${oa_targetdir}/include
 OA_LIB = -L@top_builddir@/@target@/lib -lOpenAxiom
 
-KLF_INC = @srcdir@/../klfbackend
-KLF_LIB = -L@top_builddir@/@target@/lib/klfbackend -lKLFBackend
+#KLF_INC = @srcdir@/../klfbackend
+#KLF_LIB = -L@top_builddir@/@target@/lib/klfbackend -lKLFBackend
+KLF_INC = /usr/include/klfbackend
+KLF_LIB = -L/usr/lib64 -lklfbackend
 
 
 ## We build in release mode.
@@ -49,7 +51,7 @@ TARGET = open-axiom
 VPATH += @srcdir@
 
 ## Our headers
-HEADERS += server.h conversation.h main-window.h debate.h
+HEADERS += server.h latexthread.h conversation.h main-window.h debate.h
 INCLUDEPATH += $$OA_INC
 INCLUDEPATH +=  @srcdir@
 INCLUDEPATH += @top_srcdir@/src/include
@@ -58,7 +60,7 @@ DEPENDPATH += @srcdir@
 INCLUDEPATH += $$KLF_INC
 
 ## Source files
-SOURCES += server.cc conversation.cc main-window.cc debate.cc main.cc
+SOURCES += server.cc latexthread.cc conversation.cc main-window.cc debate.cc main.cc
 
 ## Additional support libraries
 LIBS += $$OA_LIB

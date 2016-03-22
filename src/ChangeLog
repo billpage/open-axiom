@@ -1,3 +1,8 @@
+2016-03-19  Bill Page  <bill.page@newsynthesis.org>
+
+	Update gui to allow multi-line input and LaTeX output.
+        Uses KLFbackend library from distribution.
+
 2016-01-31  Gabriel Dos Reis  <gdr@axiomatics.org>
 
 	Breaking change from previous version: No more support for command

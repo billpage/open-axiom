@@ -209,6 +209,7 @@ namespace OpenAxiom {
       Exchange* exchange() { return cur_ex; }
 
       void process_reply(QByteArray data);
+      void resize_me2(QSize sz);
 
    public slots:
       // Return the topic following a given topic in this set of conversations

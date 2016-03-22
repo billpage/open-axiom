@@ -145,8 +145,7 @@ OPENAXIOM_MAKEFILE([src/graph/view3D/Makefile])
 OPENAXIOM_MAKEFILE([src/graph/viewAlone/Makefile])
 OPENAXIOM_MAKEFILE([src/graph/viewman/Makefile])
 AC_CONFIG_FILES([
-  src/gui/gui.pro
-  src/klfbackend/KLFBackend.pro])
+  src/gui/gui.pro])
 
 AC_CONFIG_LINKS([${target}/include/open-axiom/config:config/openaxiom-c-macros.h],
   [],
@@ -163,7 +162,6 @@ if test x$oa_has_qt = xyes; then
          ;;
   esac
   (cd src/gui && $OA_QT_QMAKE -makefile $oa_qmake_spec gui.pro)
-  (cd src/klfbackend && $OA_QT_QMAKE -makefile $oa_qmake_spec KLFBackend.pro)
 fi
 
 ## Generate rules to extrad SPAD type definitions from pamphlets.

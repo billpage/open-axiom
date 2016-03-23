@@ -68,13 +68,6 @@ namespace OpenAxiom {
    // An output text area is a widget where we output text.
    // The texts are accumulated, as opposed to overwritten
    // including delayed subsitution of LaTeX generated images.
-   struct Substition {
-       int height;
-       OutputTextArea* area;
-       int pos;
-   };
-
-   typedef std::queue<Substition> Pending;
 
    class OutputTextArea : public QTextEdit {
       typedef QTextEdit Base;
@@ -104,6 +97,7 @@ namespace OpenAxiom {
       explicit Question(Exchange*);
       QSize sizeHint() const;
       QTemporaryFile* file() { return &tmp; }
+      Exchange *exchange() { return exch; }
 
    signals:
        void returnPressed();
@@ -117,6 +111,7 @@ namespace OpenAxiom {
       void keyPressEvent ( QKeyEvent * event );
 
    private:
+      Exchange *exch;
       int cur_height;
       QTemporaryFile tmp;
    };
@@ -148,7 +143,10 @@ namespace OpenAxiom {
       const Answer* answer() const { return &reply; }
 
       // Conversation number
-      int number() const { return no; }
+      int number() const { return no; };
+
+      // Conversation
+      Conversation * conversation() { return win; };
 
       // Reimplement position management.
       QSize sizeHint() const;
@@ -200,6 +198,9 @@ namespace OpenAxiom {
       
       // Start a new conversation topic.
       Exchange* new_topic();
+
+      // set current topic
+      void set_topic(Exchange * exch);
       
       // Override QWidegt::sizeHint.  Return the cumulative sizes
       // of all conversations so far.

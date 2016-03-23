@@ -57,11 +57,13 @@ namespace OpenAxiom {
       void done(int, QProcess::ExitStatus);
       void display_error(QString);
       void display_error();
+      void new_file();
       void open_file();
       void save_file();
 
    private:
       Server srv;
+      Debate *debate;
       QTabWidget tabs;
       void read_databases();
    };

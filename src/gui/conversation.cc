@@ -131,6 +131,7 @@ namespace OpenAxiom {
       setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
       setLineWidth(1);
       cur_height = 0;
+      exch = e;
       tmp.setFileTemplate("/tmp/axiomXXXXXX.input");
       if (not tmp.open()) qDebug() << "Couldn't open tmp file.";
       tmp.setAutoRemove(true);
@@ -149,6 +150,8 @@ namespace OpenAxiom {
    }
 
    void Question::focusInEvent(QFocusEvent* e) {
+      qDebug()<<"Question::focus" << exch->number();
+      exch->conversation()->set_topic(exch);
       QTextEdit::focusInEvent(e);
    }
 
@@ -245,11 +248,16 @@ namespace OpenAxiom {
       QString input = question()->toPlainText();
       if (empty_string(input))
          return;
+      qDebug() << "input" << input;
+      if (question()->file()->isOpen()) {
+          question()->file()->close();
+          if (not question()->file()->open()) qDebug() << "Couldn't open tmp file.";
+      };
       question()->file()->write(input.toAscii());
       question()->file()->flush();
       input = ")read " + question()->file()->fileName() + " )quiet";
 
-      question()->setReadOnly(true); // Make query area read only.
+      //question()->setReadOnly(true); // Make query area read only.
       question()->clearFocus();
       prepare_reply_widget(win, this);
       server()->input(input);
@@ -363,10 +371,18 @@ namespace OpenAxiom {
          greetings.update();
    }
 
+   // set current topic
+   void Conversation::set_topic(Exchange * exch) {
+       cur_ex = exch;
+       cur_out = cur_ex->answer();
+       adjustSize();
+   }
+
    Exchange*
    Conversation::new_topic() {
       Exchange* w = new Exchange(this, length() + 1);
       w->show();
+      w->answer()->clear();
       children.push_back(w);
       adjustSize();
       updateGeometry();
@@ -401,6 +417,7 @@ namespace OpenAxiom {
        // Found prompt, start processing
        QStringList strs = buf.split('\n');
        buf = "";
+       cur_out->clear();
        for (auto& s : strs) {
            if (rx.indexIn(s) != -1) {
                prompt = s;
@@ -437,6 +454,7 @@ namespace OpenAxiom {
        if (not empty_string(type)) {
            type = "";
        }
+       // Make sure we're done
        QApplication::processEvents();
        cur_out->show();
        cur_out->resize(cur_out->document()->size().width(),cur_out->document()->size().height());

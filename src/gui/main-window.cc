@@ -66,7 +66,7 @@ namespace OpenAxiom {
 
       setCentralWidget(&tabs);
       setWindowTitle("OpenAxiom");
-      auto debate = new Debate(this);
+      debate = new Debate(this);
       tabs.addTab(debate, "Interpreter");
       auto s = debate->widget()->frameSize();
       s.rwidth() += debate->verticalScrollBar()->width();
@@ -74,7 +74,12 @@ namespace OpenAxiom {
       resize(s);
       QMenu* file = menuBar()->addMenu(tr("&File"));
 
-      QAction* action = new QAction(tr("Open"), this);
+      QAction* action = new QAction(tr("New"), this);
+      file->addAction(action);
+      action->setShortcut(tr("Ctrl+N"));
+      connect(action, SIGNAL(triggered()), this, SLOT(new_file()));
+
+      action = new QAction(tr("Open"), this);
       file->addAction(action);
       action->setShortcut(tr("Ctrl+O"));
       connect(action, SIGNAL(triggered()), this, SLOT(open_file()));
@@ -98,7 +103,7 @@ namespace OpenAxiom {
       // wait to be pinged before displaying a prompt.  This is
       // an unfortunate result of a rather awkward hack.
       server()->launch();
-      read_databases();
+      //read_databases();
       connect_server_io(this, debate);
       server()->input(")read init.input )quiet");
    }
@@ -106,11 +111,19 @@ namespace OpenAxiom {
    MainWindow::~MainWindow() {
    }
 
+   MainWindow *newMW;
+
+   void MainWindow::new_file() {
+      qDebug()<<"new";
+      debate->exchanges()->~Conversation();
+   }
+
    void MainWindow::open_file() {
       //  FIXME.
       auto s = server()->readAllStandardError();
       QMessageBox::warning(this, tr("Opened file"), QString(s));
    }
+
    void MainWindow::save_file() {
       // FIXME.
       auto s = server()->readAllStandardError();

@@ -31,6 +31,7 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "server.h"
+#include <QDebug>
 
 namespace OpenAxiom {
    static Command

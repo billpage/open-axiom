@@ -7,7 +7,11 @@ LatexThread::LatexThread() {
         qDebug() << "unable to find LaTeX in default directories.";
     input.mathmode = "\\[ ... \\]";
     input.dpi = 150;
-    input.preamble = QString("\\usepackage{amssymb,amsmath,mathrsfs}");
+    input.preamble = QString("\\usepackage{amssymb,amsmath,mathrsfs}\
+                              \\newcommand{\\zag}[2]{\\begin{array}{c}\\multicolumn{1}{c|}{#1}\\\\\\hline \
+                              \\multicolumn{1}{|c}{#2}\\end{array}}");
+    // Not sure why the following is necessary when running outside of Qt Creator.
+    settings.execenv = {"TEXINPUTS=/usr/share/texmf//:"};
 }
 
 LatexThread::~LatexThread() {
@@ -23,7 +27,7 @@ void LatexThread::run() {
         input.latex = texbuf;
         output = KLFBackend::getLatexFormula(input, settings);
         if (output.status != 0) {
-            emit error(output.errorstr.toLocal8Bit().constData());
+            emit error(output.errorstr);
         }
         else {
             //qDebug() << "Image ready" << texpos;

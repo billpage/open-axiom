@@ -25,7 +25,7 @@ public slots:
 
 signals:
     void got_image(QImage s, OutputTextArea *area, int pos);
-    void error(const std::string& err);
+    void error(QString err);
 
 private:
     // add your variables here

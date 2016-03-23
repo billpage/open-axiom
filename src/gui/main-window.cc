@@ -45,8 +45,8 @@
 
 namespace OpenAxiom {
    void
-   MainWindow::display_error(const std::string& s) {
-      QMessageBox::critical(this, tr("System error"), QString(s.c_str()));
+   MainWindow::display_error(QString s) {
+      QMessageBox::critical(this, tr("System error"), s);
    }
 
    void
@@ -90,7 +90,7 @@ namespace OpenAxiom {
       connect(action, SIGNAL(triggered()), this, SLOT(close()));
 
       latexthread = new LatexThread();
-      connect(latexthread, SIGNAL(error(const std::string&)), this, SLOT(display_error(const std::string&)));
+      connect(latexthread, SIGNAL(error(QString)), this, SLOT(display_error(QString)));
       connect(latexthread, SIGNAL(got_image(QImage, OutputTextArea*, int)), debate->exchanges(), SLOT(add_image(QImage, OutputTextArea*, int)));
       latexthread->start();
 

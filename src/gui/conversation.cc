@@ -259,12 +259,9 @@ namespace OpenAxiom {
    void Exchange::resizeEvent(QResizeEvent* e) {
       QFrame::resizeEvent(e);
       auto sz=size();
-      //qDebug()<<"Exchange::resizeEvent"<< sz;
       const int w = width() - 2 * our_margin(this);
-      // (w > question()->width()) {
-         question()->resize(w, question()->height());
-         answer()->resize(w, answer()->height());
-      //
+      question()->resize(w, question()->height());
+      answer()->resize(w, answer()->height());
    }
 
    // ------------
@@ -350,12 +347,6 @@ namespace OpenAxiom {
       const QSize sz = size();
       if (e->oldSize() == sz)
          return;
-      //qDebug()<<"Conversation::resizeEvent"<<sz;
-      //greetings.resize(sz.width(), greetings.height());
-      //for (int i = 0; i < length(); ++i) {
-      //   Exchange* e = children[i];
-      //   e->resize(sz.width(), e->height());
-      //}
    }
 
    void Conversation::resize_me2(QSize sz) {

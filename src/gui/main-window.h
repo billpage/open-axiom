@@ -55,7 +55,7 @@ namespace OpenAxiom {
 
    private slots:
       void done(int, QProcess::ExitStatus);
-      void display_error(const std::string&);
+      void display_error(QString);
       void display_error();
       void open_file();
       void save_file();

@@ -98,6 +98,8 @@ namespace OpenAxiom {
       QSize sizeHint() const;
       QTemporaryFile* file() { return &tmp; }
       Exchange *exchange() { return exch; }
+      // next(+1) or previous(-1) question
+      void jump(int n);
 
    signals:
        void returnPressed();
@@ -161,7 +163,7 @@ namespace OpenAxiom {
       Answer reply;
 
    private slots:
-      void reply_to_query();
+      void send_query();
    };
 
    // Conversation banner, welcome greetings.
@@ -198,6 +200,9 @@ namespace OpenAxiom {
       
       // Start a new conversation topic.
       Exchange* new_topic();
+
+      // Existing topic
+      Exchange* nth_topic(int n);
 
       // set current topic
       void set_topic(Exchange * exch);

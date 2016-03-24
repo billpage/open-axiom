@@ -139,9 +139,10 @@ namespace OpenAxiom {
    }
 
    void Question::checkSize() {
+       qDebug()<<"checkSize";
        if (document()->size().height()==cur_height) return;
        cur_height = document()->size().height();
-       adjustSize();
+       adjustSize(); updateGeometry();
        parentWidget()->adjustSize();
    }
 
@@ -150,13 +151,19 @@ namespace OpenAxiom {
    }
 
    void Question::focusInEvent(QFocusEvent* e) {
-      qDebug()<<"Question::focus" << exch->number();
       exch->conversation()->set_topic(exch);
       QTextEdit::focusInEvent(e);
    }
 
    void Question::enterEvent(QEvent* e) {
       QTextEdit::enterEvent(e);
+   }
+
+   void Question::jump(int n) {
+       Question* ques = exch->conversation()->nth_topic(exch->number()+n)->question();
+       ques->setFocus();
+       if (n>0) ques->moveCursor(QTextCursor::Start);
+       if (n<0) ques->moveCursor(QTextCursor::End);
    }
 
    void Question::keyPressEvent ( QKeyEvent* event ) {
@@ -167,8 +174,14 @@ namespace OpenAxiom {
              QTextEdit::keyPressEvent( new QKeyEvent(QEvent::KeyPress, Qt::Key_Return,0) );
          }
          event->accept();
-     } else
-         QTextEdit::keyPressEvent( event );
+     }
+     else if ((event->key() == Qt::Key_Up and event->modifiers()&Qt::ControlModifier) or
+              (event->key() == Qt::Key_Up and textCursor().atStart()) or
+              (event->key() == Qt::Key_Left and textCursor().atStart()) ) jump(-1);
+     else if ((event->key() == Qt::Key_Down and event->modifiers()&Qt::ControlModifier) or
+              (event->key() == Qt::Key_Down and textCursor().atEnd()) or
+              (event->key() == Qt::Key_Right and textCursor().atEnd()) ) jump(+1);
+     else QTextEdit::keyPressEvent( event );
    }
 
    // ------------
@@ -228,7 +241,7 @@ namespace OpenAxiom {
       setFont(conv->font());
       move(conv->bottom_left());
       connect(question(), SIGNAL(returnPressed()),
-              this, SLOT(reply_to_query()));
+              this, SLOT(send_query()));
    }
 
    static void ensure_visibility(Debate* debate, Exchange* e) {
@@ -244,20 +257,15 @@ namespace OpenAxiom {
    }
    
    void
-   Exchange::reply_to_query() {
+   Exchange::send_query() {
       QString input = question()->toPlainText();
       if (empty_string(input))
          return;
       qDebug() << "input" << input;
-      if (question()->file()->isOpen()) {
-          question()->file()->close();
-          if (not question()->file()->open()) qDebug() << "Couldn't open tmp file.";
-      };
+      question()->file()->resize(0);
       question()->file()->write(input.toAscii());
       question()->file()->flush();
       input = ")read " + question()->file()->fileName() + " )quiet";
-
-      //question()->setReadOnly(true); // Make query area read only.
       question()->clearFocus();
       prepare_reply_widget(win, this);
       server()->input(input);
@@ -265,8 +273,8 @@ namespace OpenAxiom {
    }
 
    void Exchange::resizeEvent(QResizeEvent* e) {
+       qDebug()<<"resize Exchange";
       QFrame::resizeEvent(e);
-      auto sz=size();
       const int w = width() - 2 * our_margin(this);
       question()->resize(w, question()->height());
       answer()->resize(w, answer()->height());
@@ -375,7 +383,6 @@ namespace OpenAxiom {
    void Conversation::set_topic(Exchange * exch) {
        cur_ex = exch;
        cur_out = cur_ex->answer();
-       adjustSize();
    }
 
    Exchange*
@@ -390,8 +397,15 @@ namespace OpenAxiom {
       return cur_ex = w;
    }
 
+   Exchange* Conversation::nth_topic(int n) {
+       if (n<1) return children[0];
+       if (n>length()) return children[length()-1];
+       return children[n-1];
+   }
+
    Exchange*
    Conversation::next(Exchange* w) {
+       qDebug()<<"next Exchange";
       if (w == 0 or w->number() == length())
          return new_topic();
       return cur_ex = children[w->number()];
@@ -418,6 +432,7 @@ namespace OpenAxiom {
        QStringList strs = buf.split('\n');
        buf = "";
        cur_out->clear();
+       cur_out->resize(parentWidget()->width() - 2*our_margin(cur_out),cur_out->document()->size().height());
        for (auto& s : strs) {
            if (rx.indexIn(s) != -1) {
                prompt = s;
@@ -466,8 +481,6 @@ namespace OpenAxiom {
        }
        else {
            exchange()->adjustSize();
-           //exchange()->update();
-           //exchange()->updateGeometry();
            if (not empty_string(prompt)) {
                prompt = "";
                ensure_visibility(debate(), next(exchange()));

@@ -138,12 +138,30 @@ namespace OpenAxiom {
       connect(this, SIGNAL(textChanged()), this, SLOT(checkSize()));
    }
 
+   // Dress the reply aread with initial properties.
+   // Place the reply widget right below the frame containing
+   // the query widget; make both of the same width, of course.
+
+   // Amount of pixel spacing between the query and reply areas.
+   const int spacing = 2;
+
+   static void
+   prepare_reply_widget(Conversation* conv, Exchange* e) {
+      Answer* a = e->answer();
+      Question* q = e->question();
+      const QPoint pt = e->question()->geometry().bottomLeft();
+      const int m = our_margin(a);
+      a->setGeometry(pt.x(), pt.y() + spacing,
+             conv->width() - 2 * m, a->height());
+      a->setBackgroundRole(q->backgroundRole());
+   }
+
    void Question::checkSize() {
-       qDebug()<<"checkSize";
        if (document()->size().height()==cur_height) return;
        cur_height = document()->size().height();
        adjustSize(); updateGeometry();
        parentWidget()->adjustSize();
+       prepare_reply_widget(exchange()->conversation(), exchange());
    }
 
    QSize Question::sizeHint() const {
@@ -195,8 +213,6 @@ namespace OpenAxiom {
    // --------------
    // -- Exchange --
    // --------------
-   // Amount of pixel spacing between the query and reply areas.
-   const int spacing = 2;
 
    // Return a monospace font
    static QFont monospace_font() {
@@ -219,20 +235,6 @@ namespace OpenAxiom {
 
    Server* Exchange::server() const {
       return win->debate()->server();
-   }
-
-   // Dress the reply aread with initial properties.
-   // Place the reply widget right below the frame containing
-   // the query widget; make both of the same width, of course.
-   static void
-   prepare_reply_widget(Conversation* conv, Exchange* e) {
-      Answer* a = e->answer();
-      Question* q = e->question();
-      const QPoint pt = e->question()->geometry().bottomLeft();
-      const int m = our_margin(a);
-      a->setGeometry(pt.x(), pt.y() + spacing, 
-             conv->width() - 2 * m, q->height());
-      a->setBackgroundRole(q->backgroundRole());
    }
 
    Exchange::Exchange(Conversation* conv, int n)
@@ -261,7 +263,6 @@ namespace OpenAxiom {
       QString input = question()->toPlainText();
       if (empty_string(input))
          return;
-      qDebug() << "input" << input;
       question()->file()->resize(0);
       question()->file()->write(input.toAscii());
       question()->file()->flush();
@@ -273,7 +274,6 @@ namespace OpenAxiom {
    }
 
    void Exchange::resizeEvent(QResizeEvent* e) {
-       qDebug()<<"resize Exchange";
       QFrame::resizeEvent(e);
       const int w = width() - 2 * our_margin(this);
       question()->resize(w, question()->height());
@@ -405,10 +405,15 @@ namespace OpenAxiom {
 
    Exchange*
    Conversation::next(Exchange* w) {
-       qDebug()<<"next Exchange";
       if (w == 0 or w->number() == length())
          return new_topic();
-      return cur_ex = children[w->number()];
+      cur_ex = children[w->number()];
+      // reposition this exchange
+      // maybe reposition all the older children?
+      const QPoint pt = w->geometry().bottomLeft();
+      cur_ex->setGeometry(pt.x(), pt.y(),
+             cur_ex->width(), cur_ex->height());
+      return cur_ex;
    }
 
    static QTextCharFormat

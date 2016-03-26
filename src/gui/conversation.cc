@@ -44,6 +44,9 @@
 #include <QScrollBar>
 #include <QApplication>
 #include <QKeyEvent>
+#include <QBuffer>
+#include <QFileDialog>
+#include <QMenu>
 #include "conversation.h"
 #include "debate.h"
 #include "latexthread.h"
@@ -81,7 +84,7 @@ namespace OpenAxiom {
       get_cursor().movePosition(QTextCursor::End);
       setReadOnly(true);          // this is a output only area.
       //setLineWrapMode(NoWrap);    // for the time being, mess with nothing.
-      setAcceptRichText(false);
+      setAcceptRichText(true);
       setFont(p->font());
       setViewportMargins(0, 0, 0, 0);
       setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding);
@@ -122,20 +125,42 @@ namespace OpenAxiom {
    // -- Question --
    // --------------
    Question::Question(Exchange* e) : QTextEdit(e) {
-      setBackgroundRole(QPalette::AlternateBase);
-      setFrameStyle(Box|Sunken);
-      //setLineWrapMode(NoWrap);
+      setStyleSheet("* { border-style: solid hidden hidden solid; border-width: 1px; border-color:lightgray;}");
       setFont(e->font());
-      setViewportMargins(0, 0, 0, 0);
+      setAcceptRichText(true);
+      setViewportMargins(10, 0, 0, 0);
       setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding);
       setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
       setLineWidth(1);
       cur_height = 0;
       exch = e;
+      // open-axiom commands
       tmp.setFileTemplate("/tmp/axiomXXXXXX.input");
       if (not tmp.open()) qDebug() << "Couldn't open tmp file.";
       tmp.setAutoRemove(true);
-      connect(this, SIGNAL(textChanged()), this, SLOT(checkSize()));
+      connect(this, SIGNAL(textChanged()), this, SLOT(dirtyText()));
+      setContextMenuPolicy(Qt::CustomContextMenu);
+      connect(this,SIGNAL(customContextMenuRequested(const QPoint&)),
+              this,SLOT(showContextMenu(const QPoint &)));
+      // Fix this
+      //connect(actionUnderline, SIGNAL(triggered()), this, SLOT(returnPresssed()));
+
+   }
+
+   void Question::showContextMenu(const QPoint &pt)
+   {
+       QMenu *menu = this->createStandardContextMenu();
+       QAction *action;
+       action = new QAction("Execute",this);
+       action->setShortcut(QKeySequence(Qt::Key_Return + Qt::SHIFT));
+       menu->addAction(action);
+       connect(action,SIGNAL(triggered()),exchange(),SLOT(send_query()));
+       action = new QAction("Comment",this);
+       action->setShortcut(QKeySequence(Qt::Key_Return + Qt::CTRL));
+       menu->addAction(action);
+       connect(action,SIGNAL(triggered()),exchange()->conversation(),SLOT(no_reply()));
+       menu->exec(this->mapToGlobal(pt));
+       delete menu;
    }
 
    // Dress the reply aread with initial properties.
@@ -147,16 +172,29 @@ namespace OpenAxiom {
 
    static void
    prepare_reply_widget(Conversation* conv, Exchange* e) {
+       conv->adjustConversation(e);
+
       Answer* a = e->answer();
       Question* q = e->question();
       const QPoint pt = e->question()->geometry().bottomLeft();
       const int m = our_margin(a);
       a->setGeometry(pt.x(), pt.y() + spacing,
              conv->width() - 2 * m, a->height());
-      a->setBackgroundRole(q->backgroundRole());
    }
 
-   void Question::checkSize() {
+   void Question::dirtyText() {
+       qDebug()<<"checkSize";
+       //QPalette Pal(palette());
+       //Pal.setColor(QPalette::Background, Qt::lightGray);
+       //setAutoFillBackground(true);
+       //setPalette(Pal);
+       //setBackgroundRole(QPalette::Background);
+       //setBackground(Qt::lightGray);
+       exchange()->setStyleSheet("* { background-color: rgb(255,240,240); }");
+       exchange()->question()->setStyleSheet(
+                   "* { border-style: solid hidden hidden solid; border-width: 1px; border-color:lightgray;}");
+       //exchange()->question()->setFrameStyle(Box|Sunken);
+       //exchange()->answer()->setStyleSheet("* { background: rgb(255,250,250); }");
        if (document()->size().height()==cur_height) return;
        cur_height = document()->size().height();
        adjustSize(); updateGeometry();
@@ -188,6 +226,8 @@ namespace OpenAxiom {
      if(event->key() == Qt::Key_Return) {
          if (event->modifiers()&Qt::ShiftModifier) {
              emit returnPressed();
+         } else if (event->modifiers()&Qt::ControlModifier) {
+             emit dontEvaluate();
          } else {
              QTextEdit::keyPressEvent( new QKeyEvent(QEvent::KeyPress, Qt::Key_Return,0) );
          }
@@ -206,7 +246,7 @@ namespace OpenAxiom {
    // -- Answer --
    // ------------
    Answer::Answer(Exchange* e) : OutputTextArea(e) {
-      setFrameStyle(StyledPanel | Raised);
+      setStyleSheet("* { border-style: hidden solid solid hidden; border-width: 1px; border-color:lightgray;}");
       hide();
    }
 
@@ -244,6 +284,9 @@ namespace OpenAxiom {
       move(conv->bottom_left());
       connect(question(), SIGNAL(returnPressed()),
               this, SLOT(send_query()));
+      // expect no reply!
+      connect(question(), SIGNAL(dontEvaluate()),
+              conv, SLOT(no_reply()));
    }
 
    static void ensure_visibility(Debate* debate, Exchange* e) {
@@ -373,11 +416,11 @@ namespace OpenAxiom {
        }
    }
 
-   void Conversation::paintEvent(QPaintEvent* e) {
-      QWidget::paintEvent(e);
-      if (length() == 0)
-         greetings.update();
-   }
+   //void Conversation::paintEvent(QPaintEvent* e) {
+   //   QWidget::paintEvent(e);
+   //   if (length() == 0)
+   //      greetings.update();
+   //}
 
    // set current topic
    void Conversation::set_topic(Exchange * exch) {
@@ -403,17 +446,27 @@ namespace OpenAxiom {
        return children[n-1];
    }
 
+   // reposition all the older children
+   void Conversation::adjustConversation(Exchange *e) {
+       for (auto i=e->number();i<length();i++) {
+           const QPoint pt = children[i-1]->geometry().bottomLeft();
+           children[i]->setGeometry(pt.x(), pt.y(),
+                                    children[i]->width(), children[i]->height());
+       };
+       adjustSize();
+   }
+
    Exchange*
-   Conversation::next(Exchange* w) {
-      if (w == 0 or w->number() == length())
-         return new_topic();
-      cur_ex = children[w->number()];
-      // reposition this exchange
-      // maybe reposition all the older children?
-      const QPoint pt = w->geometry().bottomLeft();
-      cur_ex->setGeometry(pt.x(), pt.y(),
-             cur_ex->width(), cur_ex->height());
-      return cur_ex;
+   Conversation::next() {
+       Exchange* w = cur_ex;
+       if (w == 0 or w->number() == length()) {
+           cur_ex = new_topic();
+       } else {
+           cur_ex = children[w->number()];
+           adjustConversation(w);
+       }
+       cur_ex->question()->setFocus(Qt::OtherFocusReason);
+       return cur_ex;
    }
 
    static QTextCharFormat
@@ -485,10 +538,15 @@ namespace OpenAxiom {
            }
        }
        else {
+           exchange()->setStyleSheet("* { background-color: transparent; }");
+           exchange()->question()->setStyleSheet(
+                       "* { border-style: solid hidden hidden solid; border-width: 1px; border-color:lightgray;}");
+           //exchange()->question()->setFrameStyle(Box|Sunken);
+           //exchange()->answer()->setStyleSheet("* { background: transparent; }");
            exchange()->adjustSize();
            if (not empty_string(prompt)) {
                prompt = "";
-               ensure_visibility(debate(), next(exchange()));
+               ensure_visibility(debate(), next());
                QApplication::restoreOverrideCursor();
            }
            else {
@@ -496,4 +554,91 @@ namespace OpenAxiom {
            }
        }
    }
+
+   void
+   Conversation::no_reply() {
+       cur_out->clear();
+       cur_out->hide();
+       cur_out->resize(parentWidget()->width() - 2*our_margin(cur_out),cur_out->document()->size().height());
+       cur_out->resize(cur_out->document()->size().width(),cur_out->document()->size().height());
+       exchange()->setStyleSheet("* { background-color: transparent; }");
+       //exchange()->question()->setStyleSheet(
+       //            "* { border-style: solid hidden hidden solid; border-width: 1px; border-color:lightgray; }");
+       exchange()->question()->setStyleSheet(
+                   "* { border-style: none; border-width: 1px; border-color:lightgray; }");
+       if (length() == 0) {
+           ensure_visibility(debate(), new_topic());
+       }
+       else {
+           exchange()->adjustSize();
+           ensure_visibility(debate(), next());
+           QApplication::restoreOverrideCursor();
+       };
+
+   }
+
+   QString render_html(QTextDocument *doc) {
+       QString html_data = doc->toHtml();
+       // just the body
+       QRegExp body("<body .*>.*(<.*)</body>");
+       if (body.indexIn(doc->toHtml())==-1) qDebug()<<"no body in the library";
+       html_data = body.cap(1);
+       qDebug()<< "body" << html_data;
+       // embed images
+       QTextBlock b = doc->begin();
+       while (b.isValid()) {
+           for (QTextBlock::iterator i = b.begin(); !i.atEnd(); ++i) {
+               QTextCharFormat format = i.fragment().charFormat();
+               bool isImage = format.isImageFormat();
+               if (isImage) {
+                   auto rn = format.toImageFormat().name();
+                   auto im = doc->resource(QTextDocument::ImageResource, rn).value<QImage>();
+                   QByteArray byteArray;
+                   QBuffer buffer(&byteArray);
+                   im.save(&buffer, "PNG"); // writes the image in PNG format inside the buffer
+                   QString ims = QString::fromLatin1(byteArray.toBase64().data());
+                   html_data.replace("<img src=\""+rn+"\" />",
+                                     "<img src=\"data:image/png;base64,"+ims+"\" />");
+                   qDebug()<<rn<<ims;
+               }
+           }
+           b = b.next();
+       }
+       return html_data;
+   }
+
+   void Conversation::save_file() {
+       QString fn = QFileDialog::getSaveFileName(this,tr("Save Worksheet"),"untitled.oa",tr("open-axiom (*.oa)"));
+       if (fn.isEmpty()) return;
+       QFile f( fn );
+       if (f.open(QFile::WriteOnly | QFile::Truncate)) {
+           QTextDocument *doc;
+           QTextStream out(&f);
+           out << "\
+<!DOCTYPE html>\n\
+<html>\n\
+<head><meta name=\"qrichtext\" content=\"1\" />\n\
+<style type=\"text/css\">\n\
+  p, li { white-space: pre-wrap; }\n\
+  .input { border-style: solid hidden hidden solid; border-width: thin; padding:2px; margin-bottom:1em; }\n\
+  .output { border-style: hidden solid solid hidden; border-width: thin; padding:2px; margin-bottom:1em; }\n\
+</style>\n\
+</head>\n\
+<body style=\" font-family:'Monaco'; font-size:11pt; font-weight:400; font-style:normal;\">\n\
+";
+           for (auto i=0;i<length();i++) {
+               out << "<div class=\"input\">\n";
+               doc = children[i]->question()->document();
+               out << render_html(doc) << "\n";
+               out << "</div>\n";
+               out << "<div class=\"output\">\n";
+               doc = children[i]->answer()->document();
+               out << render_html(doc) << "\n";
+               out << "</div>\n";
+           };
+           out << "</body></html>\n";
+           f.close();
+       } else qDebug()<<"Open save file failed";
+   }
+
 }

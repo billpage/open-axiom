@@ -87,12 +87,19 @@ namespace OpenAxiom {
       action = new QAction(tr("Save"), this);
       file->addAction(action);
       action->setShortcut(tr("Ctrl+S"));
-      connect(action, SIGNAL(triggered()), this, SLOT(save_file()));
+      connect(action, SIGNAL(triggered()), debate->exchanges(), SLOT(save_file()));
 
       action = new QAction(tr("Quit"), this);
       file->addAction(action);
       action->setShortcut(tr("Ctrl+Q"));
       connect(action, SIGNAL(triggered()), this, SLOT(close()));
+
+      QMenu* edit = menuBar()->addMenu(tr("&Edit"));
+      // Fix this
+      action = new QAction(tr("&Underline"), this);
+      edit->addAction(action);
+      action->setShortcut(QKeySequence());
+      //connect(action, SIGNAL(triggered()), debate->exchanges()->exchange()->question(), SLOT(returnPresssed()));
 
       latexthread = new LatexThread();
       connect(latexthread, SIGNAL(error(QString)), this, SLOT(display_error(QString)));
@@ -103,6 +110,7 @@ namespace OpenAxiom {
       // wait to be pinged before displaying a prompt.  This is
       // an unfortunate result of a rather awkward hack.
       server()->launch();
+      // Why this?
       //read_databases();
       connect_server_io(this, debate);
       server()->input(")read init.input )quiet");
@@ -122,12 +130,6 @@ namespace OpenAxiom {
       //  FIXME.
       auto s = server()->readAllStandardError();
       QMessageBox::warning(this, tr("Opened file"), QString(s));
-   }
-
-   void MainWindow::save_file() {
-      // FIXME.
-      auto s = server()->readAllStandardError();
-      QMessageBox::warning(this, tr("Saved File"), QString(s));
    }
 
    void MainWindow::done(int s, QProcess::ExitStatus) {

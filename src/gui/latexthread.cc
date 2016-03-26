@@ -31,7 +31,12 @@ void LatexThread::run() {
         }
         else {
             //qDebug() << "Image ready" << texpos;
-            emit got_image(output.result,texarea,texpos);
+            QImage img = output.result.convertToFormat(QImage::Format_ARGB32,Qt::DiffuseAlphaDither);
+            for (int i = 0; i < img.height(); i++)
+                for (int j = 0; j < img.width(); j++)
+                    if(img.pixel(j, i) == qRgba(255,255,255,255))
+                        img.setPixel(j, i, Qt::transparent);
+            emit got_image(img,texarea,texpos);
         }
         mutex.unlock();
     }

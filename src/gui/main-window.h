@@ -59,7 +59,6 @@ namespace OpenAxiom {
       void display_error();
       void new_file();
       void open_file();
-      void save_file();
 
    private:
       Server srv;

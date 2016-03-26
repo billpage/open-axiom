@@ -103,9 +103,13 @@ namespace OpenAxiom {
 
    signals:
        void returnPressed();
+       void dontEvaluate();
 
    private slots:
-       void checkSize();
+       void dirtyText();
+
+   public slots:
+       void showContextMenu(const QPoint &pt);
 
    protected:
       void enterEvent(QEvent*);
@@ -198,9 +202,6 @@ namespace OpenAxiom {
       // the set of exchanges in this conversation.
       QPoint bottom_left() const;
       
-      // Start a new conversation topic.
-      Exchange* new_topic();
-
       // Existing topic
       Exchange* nth_topic(int n);
 
@@ -214,17 +215,24 @@ namespace OpenAxiom {
       // Return a pointer to the current exchange, if any.
       Exchange* exchange() { return cur_ex; }
 
+      // Start a new conversation topic.
+      Exchange* new_topic();
+
       void process_reply(QByteArray data);
       void resize_me2(QSize sz);
+      void adjustConversation(Exchange *e);
 
    public slots:
       // Return the topic following a given topic in this set of conversations
-      Exchange* next(Exchange*);
+      Exchange* next();
+      // Target for dont_evaluate
+      void no_reply();
       void add_image(const QImage& s, OutputTextArea *area, int pos);
+      void save_file();
 
    protected:
       void resizeEvent(QResizeEvent*);
-      void paintEvent(QPaintEvent*);
+      //void paintEvent(QPaintEvent*);
 
    private slots:
       void read_reply();

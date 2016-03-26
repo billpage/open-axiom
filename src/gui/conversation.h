@@ -148,8 +148,10 @@ namespace OpenAxiom {
       Answer* answer() { return &reply; }
       const Answer* answer() const { return &reply; }
 
-      // Conversation number
+      // Exchange number: children[i]->number()=i+1
       int number() const { return no; };
+      // Exchange number: children[i]->set_number(i+1)
+      int set_number(int n) { no = n; return no; };
 
       // Conversation
       Conversation * conversation() { return win; };
@@ -162,7 +164,7 @@ namespace OpenAxiom {
       Conversation* const win;
 
    private:
-      const int no;
+      int no;
       Question query;
       Answer reply;
 
@@ -220,13 +222,16 @@ namespace OpenAxiom {
 
       void process_reply(QByteArray data);
       void resize_me2(QSize sz);
-      void adjustConversation(Exchange *e);
+      void adjustConversation(int n);
 
    public slots:
       // Return the topic following a given topic in this set of conversations
       Exchange* next();
+      // delete one of the children
+      void delete_topic();
+      void insert_topic();
       // Target for dont_evaluate
-      void no_reply();
+      void comment();
       void add_image(const QImage& s, OutputTextArea *area, int pos);
       void save_file();
 

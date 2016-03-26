@@ -39,8 +39,8 @@ void myMessageOutput(QtMsgType type, const char *msg)
      //in this function, you can write the message to any stream!
      switch (type) {
      case QtDebugMsg:
-         // comment kill debug output
-         //fprintf(stderr, "Debug: %s\n", msg);
+         // kill debug output
+         fprintf(stderr, "Debug: %s\n", msg);
          break;
      case QtWarningMsg:
          fprintf(stderr, "Warning: %s\n", msg);

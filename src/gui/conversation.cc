@@ -150,51 +150,54 @@ namespace OpenAxiom {
    void Question::showContextMenu(const QPoint &pt)
    {
        QMenu *menu = this->createStandardContextMenu();
+       // Don' inherit colors
+       menu->setStyleSheet("* { background-color: white; } QMenu::item:selected { background-color: rgb(40,130,220);  }");
        QAction *action;
+
        action = new QAction("Execute",this);
        action->setShortcut(QKeySequence(Qt::Key_Return + Qt::SHIFT));
        menu->addAction(action);
        connect(action,SIGNAL(triggered()),exchange(),SLOT(send_query()));
+
        action = new QAction("Comment",this);
        action->setShortcut(QKeySequence(Qt::Key_Return + Qt::CTRL));
        menu->addAction(action);
-       connect(action,SIGNAL(triggered()),exchange()->conversation(),SLOT(no_reply()));
+       connect(action,SIGNAL(triggered()),exchange()->conversation(),SLOT(comment()));
+
+       action = new QAction("Delete",this);
+       action->setShortcut(QKeySequence(Qt::Key_Delete + Qt::ALT));
+       menu->addAction(action);
+       connect(action,SIGNAL(triggered()),exchange()->conversation(),SLOT(delete_topic()));
+
+       action = new QAction("Insert",this);
+       action->setShortcut(QKeySequence(Qt::Key_Insert + Qt::ALT));
+       menu->addAction(action);
+       connect(action,SIGNAL(triggered()),exchange()->conversation(),SLOT(insert_topic()));
+
        menu->exec(this->mapToGlobal(pt));
        delete menu;
    }
 
-   // Dress the reply aread with initial properties.
-   // Place the reply widget right below the frame containing
-   // the query widget; make both of the same width, of course.
-
    // Amount of pixel spacing between the query and reply areas.
    const int spacing = 2;
-
+   // Place the reply widget right below the frame containing
+   // the query widget; make both of the same width, of course.
    static void
    prepare_reply_widget(Conversation* conv, Exchange* e) {
-       conv->adjustConversation(e);
+       conv->adjustConversation(e->number());
 
       Answer* a = e->answer();
       Question* q = e->question();
       const QPoint pt = e->question()->geometry().bottomLeft();
       const int m = our_margin(a);
       a->setGeometry(pt.x(), pt.y() + spacing,
-             conv->width() - 2 * m, a->height());
+             q->width() - 2 * m, a->height());
    }
 
    void Question::dirtyText() {
-       qDebug()<<"checkSize";
-       //QPalette Pal(palette());
-       //Pal.setColor(QPalette::Background, Qt::lightGray);
-       //setAutoFillBackground(true);
-       //setPalette(Pal);
-       //setBackgroundRole(QPalette::Background);
-       //setBackground(Qt::lightGray);
        exchange()->setStyleSheet("* { background-color: rgb(255,240,240); }");
        exchange()->question()->setStyleSheet(
                    "* { border-style: solid hidden hidden solid; border-width: 1px; border-color:lightgray;}");
-       //exchange()->question()->setFrameStyle(Box|Sunken);
-       //exchange()->answer()->setStyleSheet("* { background: rgb(255,250,250); }");
        if (document()->size().height()==cur_height) return;
        cur_height = document()->size().height();
        adjustSize(); updateGeometry();
@@ -233,12 +236,18 @@ namespace OpenAxiom {
          }
          event->accept();
      }
-     else if ((event->key() == Qt::Key_Up and event->modifiers()&Qt::ControlModifier) or
+     else if ((event->key() == Qt::Key_Up and event->modifiers()&Qt::AltModifier) or
               (event->key() == Qt::Key_Up and textCursor().atStart()) or
-              (event->key() == Qt::Key_Left and textCursor().atStart()) ) jump(-1);
-     else if ((event->key() == Qt::Key_Down and event->modifiers()&Qt::ControlModifier) or
+              (event->key() == Qt::Key_Left and textCursor().atStart()) )
+         jump(-1);
+     else if ((event->key() == Qt::Key_Down and event->modifiers()&Qt::AltModifier) or
               (event->key() == Qt::Key_Down and textCursor().atEnd()) or
-              (event->key() == Qt::Key_Right and textCursor().atEnd()) ) jump(+1);
+              (event->key() == Qt::Key_Right and textCursor().atEnd()) )
+         jump(+1);
+     else if ((event->key() == Qt::Key_Delete and event->modifiers()&Qt::AltModifier))
+         exchange()->conversation()->delete_topic();
+     else if ((event->key() == Qt::Key_Insert and event->modifiers()&Qt::AltModifier))
+         exchange()->conversation()->insert_topic();
      else QTextEdit::keyPressEvent( event );
    }
 
@@ -286,7 +295,7 @@ namespace OpenAxiom {
               this, SLOT(send_query()));
       // expect no reply!
       connect(question(), SIGNAL(dontEvaluate()),
-              conv, SLOT(no_reply()));
+              conv, SLOT(comment()));
    }
 
    static void ensure_visibility(Debate* debate, Exchange* e) {
@@ -416,12 +425,6 @@ namespace OpenAxiom {
        }
    }
 
-   //void Conversation::paintEvent(QPaintEvent* e) {
-   //   QWidget::paintEvent(e);
-   //   if (length() == 0)
-   //      greetings.update();
-   //}
-
    // set current topic
    void Conversation::set_topic(Exchange * exch) {
        cur_ex = exch;
@@ -440,6 +443,38 @@ namespace OpenAxiom {
       return cur_ex = w;
    }
 
+   void
+   Conversation::delete_topic() {
+       // Can't delete last topic
+       if (exchange()->number()==length()) return;
+       auto n = exchange()->number()-1;  // from 0..length()-1
+       qDebug()<<"delete_topic"<<n<<"of"<<length();
+       delete children[n]; // de-allocate Exchange
+       children.erase(children.begin()+n); // remove from list
+       // renumber
+       for(auto i=n;i<length();i++) children[i]->set_number(i+1);
+       adjustConversation(n);
+       cur_ex = children[n];
+       cur_ex->question()->setFocus(Qt::OtherFocusReason);
+   }
+
+   void
+   Conversation::insert_topic() {
+       auto n = exchange()->number()-1;  // from 0..length()-1
+       qDebug()<<"insert_topic"<<n<<"of"<<length();
+       children.insert(children.begin()+n,new Exchange(this,n));
+       // renumber
+       for(auto i=n;i<length();i++) children[i]->set_number(i+1);
+       adjustConversation(n);
+       cur_ex = children[n];
+       cur_ex->question()->setFocus(Qt::OtherFocusReason);
+       cur_ex->show();
+       cur_out = cur_ex->answer();
+       cur_out->clear();
+       adjustSize();
+       updateGeometry();
+   }
+
    Exchange* Conversation::nth_topic(int n) {
        if (n<1) return children[0];
        if (n>length()) return children[length()-1];
@@ -447,9 +482,13 @@ namespace OpenAxiom {
    }
 
    // reposition all the older children
-   void Conversation::adjustConversation(Exchange *e) {
-       for (auto i=e->number();i<length();i++) {
-           const QPoint pt = children[i-1]->geometry().bottomLeft();
+   void Conversation::adjustConversation(int n) {
+       qDebug()<<"adjustConverstation after"<<n<<"of"<<length();
+       for (auto i=n;i<length();i++) {
+           qDebug()<<"adjustConverstation move"<<i;
+           QPoint pt;
+           if (i>0) pt = children[i-1]->geometry().bottomLeft();
+           else     pt = greetings.geometry().bottomLeft();
            children[i]->setGeometry(pt.x(), pt.y(),
                                     children[i]->width(), children[i]->height());
        };
@@ -463,7 +502,7 @@ namespace OpenAxiom {
            cur_ex = new_topic();
        } else {
            cur_ex = children[w->number()];
-           adjustConversation(w);
+           adjustConversation(w->number());
        }
        cur_ex->question()->setFocus(Qt::OtherFocusReason);
        return cur_ex;
@@ -556,7 +595,7 @@ namespace OpenAxiom {
    }
 
    void
-   Conversation::no_reply() {
+   Conversation::comment() {
        cur_out->clear();
        cur_out->hide();
        cur_out->resize(parentWidget()->width() - 2*our_margin(cur_out),cur_out->document()->size().height());

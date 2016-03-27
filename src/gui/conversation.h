@@ -233,7 +233,12 @@ namespace OpenAxiom {
       // Target for dont_evaluate
       void comment();
       void add_image(const QImage& s, OutputTextArea *area, int pos);
+      // worksheet files
+      void open_file();
       void save_file();
+      // input files
+      void read_file();
+      void write_file();
 
    protected:
       void resizeEvent(QResizeEvent*);

@@ -74,20 +74,30 @@ namespace OpenAxiom {
       resize(s);
       QMenu* file = menuBar()->addMenu(tr("&File"));
 
-      QAction* action = new QAction(tr("New"), this);
+      QAction* action = new QAction(tr("New Worksheet"), this);
       file->addAction(action);
       action->setShortcut(tr("Ctrl+N"));
-      connect(action, SIGNAL(triggered()), this, SLOT(new_file()));
+      connect(action, SIGNAL(triggered()), debate->exchanges(), SLOT(new_file()));
 
-      action = new QAction(tr("Open"), this);
+      action = new QAction(tr("Open Worksheet"), this);
       file->addAction(action);
       action->setShortcut(tr("Ctrl+O"));
-      connect(action, SIGNAL(triggered()), this, SLOT(open_file()));
+      connect(action, SIGNAL(triggered()), debate->exchanges(), SLOT(open_file()));
 
-      action = new QAction(tr("Save"), this);
+      action = new QAction(tr("Save Worksheet"), this);
       file->addAction(action);
       action->setShortcut(tr("Ctrl+S"));
       connect(action, SIGNAL(triggered()), debate->exchanges(), SLOT(save_file()));
+
+      action = new QAction(tr("Read Input"), this);
+      file->addAction(action);
+      action->setShortcut(tr("Ctrl+R"));
+      connect(action, SIGNAL(triggered()), debate->exchanges(), SLOT(read_file()));
+
+      action = new QAction(tr("Write Input"), this);
+      file->addAction(action);
+      action->setShortcut(tr("Ctrl+W"));
+      connect(action, SIGNAL(triggered()), debate->exchanges(), SLOT(write_file()));
 
       action = new QAction(tr("Quit"), this);
       file->addAction(action);
@@ -120,17 +130,6 @@ namespace OpenAxiom {
    }
 
    MainWindow *newMW;
-
-   void MainWindow::new_file() {
-      qDebug()<<"new";
-      debate->exchanges()->~Conversation();
-   }
-
-   void MainWindow::open_file() {
-      //  FIXME.
-      auto s = server()->readAllStandardError();
-      QMessageBox::warning(this, tr("Opened file"), QString(s));
-   }
 
    void MainWindow::done(int s, QProcess::ExitStatus) {
       // For the time being, shut done the whole application

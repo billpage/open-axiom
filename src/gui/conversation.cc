@@ -125,10 +125,10 @@ namespace OpenAxiom {
    // -- Question --
    // --------------
    Question::Question(Exchange* e) : QTextEdit(e) {
-      setStyleSheet("* { border-style: solid hidden hidden solid; border-width: 1px; border-color:lightgray;}");
+      setStyleSheet("* { border-style: solid hidden hidden solid; border-width: 1px; border-color:gray;}");
       setFont(e->font());
       setAcceptRichText(true);
-      setViewportMargins(10, 0, 0, 0);
+      setViewportMargins(0, 0, 0, 0);
       setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding);
       setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
       setLineWidth(1);
@@ -136,7 +136,7 @@ namespace OpenAxiom {
       exch = e;
       // open-axiom commands
       tmp.setFileTemplate("/tmp/axiomXXXXXX.input");
-      if (not tmp.open()) qDebug() << "Couldn't open tmp file.";
+      if (not tmp.open()) QMessageBox::critical(0, "error", tmp.errorString());
       tmp.setAutoRemove(true);
       connect(this, SIGNAL(textChanged()), this, SLOT(dirtyText()));
       setContextMenuPolicy(Qt::CustomContextMenu);
@@ -255,7 +255,7 @@ namespace OpenAxiom {
    // -- Answer --
    // ------------
    Answer::Answer(Exchange* e) : OutputTextArea(e) {
-      setStyleSheet("* { border-style: hidden solid solid hidden; border-width: 1px; border-color:lightgray;}");
+      setStyleSheet("* { border-style: hidden solid solid hidden; border-width: 1px; border-color:gray;}");
       hide();
    }
 
@@ -448,7 +448,6 @@ namespace OpenAxiom {
        // Can't delete last topic
        if (exchange()->number()==length()) return;
        auto n = exchange()->number()-1;  // from 0..length()-1
-       qDebug()<<"delete_topic"<<n<<"of"<<length();
        delete children[n]; // de-allocate Exchange
        children.erase(children.begin()+n); // remove from list
        // renumber
@@ -461,7 +460,6 @@ namespace OpenAxiom {
    void
    Conversation::insert_topic() {
        auto n = exchange()->number()-1;  // from 0..length()-1
-       qDebug()<<"insert_topic"<<n<<"of"<<length();
        children.insert(children.begin()+n,new Exchange(this,n));
        // renumber
        for(auto i=n;i<length();i++) children[i]->set_number(i+1);
@@ -483,9 +481,7 @@ namespace OpenAxiom {
 
    // reposition all the older children
    void Conversation::adjustConversation(int n) {
-       qDebug()<<"adjustConverstation after"<<n<<"of"<<length();
        for (auto i=n;i<length();i++) {
-           qDebug()<<"adjustConverstation move"<<i;
            QPoint pt;
            if (i>0) pt = children[i-1]->geometry().bottomLeft();
            else     pt = greetings.geometry().bottomLeft();
@@ -580,8 +576,6 @@ namespace OpenAxiom {
            exchange()->setStyleSheet("* { background-color: transparent; }");
            exchange()->question()->setStyleSheet(
                        "* { border-style: solid hidden hidden solid; border-width: 1px; border-color:lightgray;}");
-           //exchange()->question()->setFrameStyle(Box|Sunken);
-           //exchange()->answer()->setStyleSheet("* { background: transparent; }");
            exchange()->adjustSize();
            if (not empty_string(prompt)) {
                prompt = "";
@@ -601,8 +595,6 @@ namespace OpenAxiom {
        cur_out->resize(parentWidget()->width() - 2*our_margin(cur_out),cur_out->document()->size().height());
        cur_out->resize(cur_out->document()->size().width(),cur_out->document()->size().height());
        exchange()->setStyleSheet("* { background-color: transparent; }");
-       //exchange()->question()->setStyleSheet(
-       //            "* { border-style: solid hidden hidden solid; border-width: 1px; border-color:lightgray; }");
        exchange()->question()->setStyleSheet(
                    "* { border-style: none; border-width: 1px; border-color:lightgray; }");
        if (length() == 0) {
@@ -620,9 +612,8 @@ namespace OpenAxiom {
        QString html_data = doc->toHtml();
        // just the body
        QRegExp body("<body .*>.*(<.*)</body>");
-       if (body.indexIn(doc->toHtml())==-1) qDebug()<<"no body in the library";
+       if (body.indexIn(doc->toHtml())==-1) QMessageBox::critical(0, "error", "no body in the library");
        html_data = body.cap(1);
-       qDebug()<< "body" << html_data;
        // embed images
        QTextBlock b = doc->begin();
        while (b.isValid()) {
@@ -638,7 +629,6 @@ namespace OpenAxiom {
                    QString ims = QString::fromLatin1(byteArray.toBase64().data());
                    html_data.replace("<img src=\""+rn+"\" />",
                                      "<img src=\"data:image/png;base64,"+ims+"\" />");
-                   qDebug()<<rn<<ims;
                }
            }
            b = b.next();
@@ -646,38 +636,109 @@ namespace OpenAxiom {
        return html_data;
    }
 
+   void Conversation::open_file() {
+       QString fn = QFileDialog::getOpenFileName(this,tr("Open Worksheet"),"",tr("open-axiom (*.oa);;html (*.html)"));
+       if (fn.isEmpty()) return;
+       QFile f( fn );
+       if (f.open(QFile::ReadOnly)) {
+           QString buf = f.readAll();
+           QRegExp ques("<div class=\"(question|comment)\">\\n(<p .*>.*</p>)\\n</div>");
+           ques.setMinimal(true);
+           QRegExp ans("<div class=\"answer\">\\n(<p .*>.*</p>)\\n</div>");
+           ans.setMinimal(true);
+           int pos = 0;
+           while ((pos = ques.indexIn(buf,pos)) != -1) {
+               exchange()->question()->setHtml(ques.cap(2));
+               pos += ques.matchedLength();
+               if (ques.cap(1)=="question") {
+               if ((pos = ans.indexIn(buf,pos)) != -1) {
+                   exchange()->answer()->setHtml(ans.cap(1));
+                   pos += ans.matchedLength();
+                   exchange()->answer()->show();
+                   cur_out->resize(cur_out->document()->size().width(),cur_out->document()->size().height());
+               }
+               exchange()->setStyleSheet("* { background-color: transparent; }");
+               exchange()->question()->setStyleSheet(
+                           "* { border-style: solid hidden hidden solid; border-width: 1px; border-color:lightgray;}");
+               exchange()->adjustSize();
+               ensure_visibility(debate(), next());
+               } else {
+                   comment();
+               }
+           }
+           f.close();
+       } else
+           QMessageBox::information(0, "error", f.errorString());
+   }
+
    void Conversation::save_file() {
-       QString fn = QFileDialog::getSaveFileName(this,tr("Save Worksheet"),"untitled.oa",tr("open-axiom (*.oa)"));
+       QString fn = QFileDialog::getSaveFileName(this,tr("Save Worksheet"),"untitled.oa",tr("open-axiom (*.oa);;html (*.html)"));
        if (fn.isEmpty()) return;
        QFile f( fn );
        if (f.open(QFile::WriteOnly | QFile::Truncate)) {
            QTextDocument *doc;
            QTextStream out(&f);
-           out << "\
-<!DOCTYPE html>\n\
-<html>\n\
-<head><meta name=\"qrichtext\" content=\"1\" />\n\
-<style type=\"text/css\">\n\
-  p, li { white-space: pre-wrap; }\n\
-  .input { border-style: solid hidden hidden solid; border-width: thin; padding:2px; margin-bottom:1em; }\n\
-  .output { border-style: hidden solid solid hidden; border-width: thin; padding:2px; margin-bottom:1em; }\n\
-</style>\n\
-</head>\n\
-<body style=\" font-family:'Monaco'; font-size:11pt; font-weight:400; font-style:normal;\">\n\
-";
+           out << "<!DOCTYPE html>\n"
+                  "<html>\n"
+                  "<head><meta name=\"qrichtext\" content=\"1\" />\n"
+                  "<style type=\"text/css\">\n"
+                  "p, li { white-space: pre-wrap; }"
+                  ".question { border-style: solid hidden hidden solid; border-width: thin;"
+                              "padding:2px; padding-left:1em; margin-bottom:1em; }\n"
+                  ".answer { border-style: hidden solid solid hidden; border-width: thin;"
+                              "padding:2px; margin-bottom:1em; }\n"
+                  ".comment { border-style: none; padding:2px; margin-bottom:1em; }\n"
+                  ".banner { border-style: none; padding:2px; margin-bottom:1em;"
+                            "font-family: monospace; text-align:center; }\n"
+                  "</style>\n"
+                  "</head>\n"
+                  "<body style=\" font-family:'Monaco,monospace'; font-size:11pt; font-weight:400; font-style:normal;\">\n";
+           out << "<div class=\"banner\">\n";
+           doc = greetings.document();
+           out << render_html(doc) << "\n";
+           out << "</div>\n";
            for (auto i=0;i<length();i++) {
-               out << "<div class=\"input\">\n";
-               doc = children[i]->question()->document();
-               out << render_html(doc) << "\n";
-               out << "</div>\n";
-               out << "<div class=\"output\">\n";
-               doc = children[i]->answer()->document();
-               out << render_html(doc) << "\n";
-               out << "</div>\n";
+               if (children[i]->answer()->isHidden() ) {
+                   out << "<div class=\"comment\">\n";
+                   doc = children[i]->question()->document();
+                   out << render_html(doc) << "\n";
+                   out << "</div>\n";
+               } else {
+                   out << "<div class=\"question\">\n";
+                   doc = children[i]->question()->document();
+                   out << render_html(doc) << "\n";
+                   out << "</div>\n";
+                   out << "<div class=\"answer\">\n";
+                   doc = children[i]->answer()->document();
+                   out << render_html(doc) << "\n";
+                   out << "</div>\n";
+               }
            };
            out << "</body></html>\n";
            f.close();
-       } else qDebug()<<"Open save file failed";
+       } else
+           QMessageBox::information(0, "error", f.errorString());
    }
 
+   void Conversation::read_file() {
+       QString fn = QFileDialog::getOpenFileName(this,tr("Read Input"),"",tr("input (*.input)"));
+       if (fn.isEmpty()) return;
+       QFile f( fn );
+       if (f.open(QFile::ReadOnly)) {
+           exchange()->question()->setPlainText(f.readAll());
+           f.close();
+       } else
+           QMessageBox::information(0, "error", f.errorString());
+   }
+
+   void Conversation::write_file() {
+       QString fn = QFileDialog::getSaveFileName(this,tr("Write Input"),"untitled.input",tr("input (*.input)"));
+       if (fn.isEmpty()) return;
+       QFile f( fn );
+       if (f.open(QFile::WriteOnly | QFile::Truncate)) {
+           f.write(exchange()->question()->toPlainText().toAscii());
+           f.close();
+       } else
+           QMessageBox::information(0, "error", f.errorString());
+   }
 }

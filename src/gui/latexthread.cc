@@ -1,10 +1,11 @@
 #include "latexthread.h"
 #include "conversation.h"
+#include <QMessageBox>
 
 namespace OpenAxiom {
 LatexThread::LatexThread() {
     if(!KLFBackend::detectSettings(&settings))
-        qDebug() << "unable to find LaTeX in default directories.";
+        QMessageBox::critical(0, "error", "unable to find LaTeX in default directories.");
     input.mathmode = "\\[ ... \\]";
     input.dpi = 150;
     input.preamble = QString("\\usepackage{amssymb,amsmath,mathrsfs}\

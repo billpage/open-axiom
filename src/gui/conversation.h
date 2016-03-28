@@ -239,6 +239,7 @@ namespace OpenAxiom {
       // input files
       void read_file();
       void write_file();
+      void underline();
 
    protected:
       void resizeEvent(QResizeEvent*);

@@ -142,9 +142,6 @@ namespace OpenAxiom {
       setContextMenuPolicy(Qt::CustomContextMenu);
       connect(this,SIGNAL(customContextMenuRequested(const QPoint&)),
               this,SLOT(showContextMenu(const QPoint &)));
-      // Fix this
-      //connect(actionUnderline, SIGNAL(triggered()), this, SLOT(returnPresssed()));
-
    }
 
    void Question::showContextMenu(const QPoint &pt)
@@ -740,5 +737,15 @@ namespace OpenAxiom {
            f.close();
        } else
            QMessageBox::information(0, "error", f.errorString());
+   }
+
+   void Conversation::underline() {
+       QTextCharFormat format;
+       format.setFontUnderline(true);
+       QTextCursor cursor = exchange()->question()->textCursor();
+       if (!cursor.hasSelection())
+          cursor.select(QTextCursor::WordUnderCursor);
+       cursor.mergeCharFormat(format);
+       exchange()->question()->mergeCurrentCharFormat(format);
    }
 }

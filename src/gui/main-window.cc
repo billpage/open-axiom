@@ -58,7 +58,7 @@ namespace OpenAxiom {
       QObject::connect(win->server(), SIGNAL(readyReadStandardError()),
                        win, SLOT(display_error()));
       QObject::connect( win->server(), SIGNAL(readyReadStandardOutput()),
-                       debate->exchanges(), SLOT(read_reply()));
+                       debate->conversation(), SLOT(read_reply()));
    }
 
    MainWindow::MainWindow(int argc, char* argv[])
@@ -77,27 +77,27 @@ namespace OpenAxiom {
       QAction* action = new QAction(tr("New Worksheet"), this);
       file->addAction(action);
       action->setShortcut(tr("Ctrl+N"));
-      connect(action, SIGNAL(triggered()), debate->exchanges(), SLOT(new_file()));
+      connect(action, SIGNAL(triggered()), debate->conversation(), SLOT(new_file()));
 
       action = new QAction(tr("Open Worksheet"), this);
       file->addAction(action);
       action->setShortcut(tr("Ctrl+O"));
-      connect(action, SIGNAL(triggered()), debate->exchanges(), SLOT(open_file()));
+      connect(action, SIGNAL(triggered()), debate->conversation(), SLOT(open_file()));
 
       action = new QAction(tr("Save Worksheet"), this);
       file->addAction(action);
       action->setShortcut(tr("Ctrl+S"));
-      connect(action, SIGNAL(triggered()), debate->exchanges(), SLOT(save_file()));
+      connect(action, SIGNAL(triggered()), debate->conversation(), SLOT(save_file()));
 
       action = new QAction(tr("Read Input"), this);
       file->addAction(action);
       action->setShortcut(tr("Ctrl+R"));
-      connect(action, SIGNAL(triggered()), debate->exchanges(), SLOT(read_file()));
+      connect(action, SIGNAL(triggered()), debate->conversation(), SLOT(read_file()));
 
       action = new QAction(tr("Write Input"), this);
       file->addAction(action);
       action->setShortcut(tr("Ctrl+W"));
-      connect(action, SIGNAL(triggered()), debate->exchanges(), SLOT(write_file()));
+      connect(action, SIGNAL(triggered()), debate->conversation(), SLOT(write_file()));
 
       action = new QAction(tr("Quit"), this);
       file->addAction(action);
@@ -109,11 +109,11 @@ namespace OpenAxiom {
       action = new QAction(tr("&Underline"), this);
       edit->addAction(action);
       action->setShortcut(QKeySequence());
-      //connect(action, SIGNAL(triggered()), debate->exchanges()->exchange()->question(), SLOT(returnPresssed()));
+      connect(action, SIGNAL(triggered()), debate->conversation(), SLOT(underline()));
 
       latexthread = new LatexThread();
       connect(latexthread, SIGNAL(error(QString)), this, SLOT(display_error(QString)));
-      connect(latexthread, SIGNAL(got_image(QImage, OutputTextArea*, int)), debate->exchanges(), SLOT(add_image(QImage, OutputTextArea*, int)));
+      connect(latexthread, SIGNAL(got_image(QImage, OutputTextArea*, int)), debate->conversation(), SLOT(add_image(QImage, OutputTextArea*, int)));
       latexthread->start();
 
       // When invoked in a --role=server mode, OpenAxiom would

@@ -49,7 +49,7 @@ namespace OpenAxiom {
       explicit Debate(MainWindow*);
       ~Debate();
 
-      Conversation* exchanges() { return &conv; }
+      Conversation* conversation() { return &conv; }
       Server* server() const;
       LatexThread* latex() const;
       //QSize sizeHint() const;

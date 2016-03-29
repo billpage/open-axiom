@@ -46,6 +46,7 @@
 #include <QPaintEvent>
 #include <QRegExp>
 #include "server.h"
+#include "exchange.h"
 #include "klfbackend.h"
 #include "klfblockprocess.h"
 
@@ -62,122 +63,6 @@ namespace OpenAxiom {
 
    class MainWindow;
 
-   // --------------------
-   // -- OutputTextArea --
-   // --------------------
-   // An output text area is a widget where we output text.
-   // The texts are accumulated, as opposed to overwritten
-   // including delayed subsitution of LaTeX generated images.
-
-   class OutputTextArea : public QTextEdit {
-      typedef QTextEdit Base;
-   public:
-      explicit OutputTextArea(QWidget*);
-      // the metrics of this output area
-      // QSize sizeHint() const;
-      // Add a new paragraph to existing texts.  Paragraghs are
-      // separated by the newline character.
-      void align_left(const QString&);
-      void align_right(const QString&, const QTextCharFormat);
-      void add_image(OutputTextArea *where, int pos, const QImage& s);
-      // Current cursor
-      QTextCursor& get_cursor() { return cur; }
-      QTextCursor& set_cursor(QTextCursor new_cur) { cur = new_cur; return cur; }
-   protected:
-      QTextCursor cur;
-   };
-
-   // ---------------
-   // -- Question --
-   // ---------------
-   // A question is a multi-line query area.
-   class Question : public QTextEdit {
-       Q_OBJECT
-   public:
-      explicit Question(Exchange*);
-      QSize sizeHint() const;
-      QTemporaryFile* file() { return &tmp; }
-      // maybe this = parentWidget()?
-      Exchange *exchange() { return exch; }
-      // next(+1) or previous(-1) question
-      void jump(int n);
-
-   signals:
-       void returnPressed();
-       void dontEvaluate();
-
-   private slots:
-       void dirtyText();
-
-   public slots:
-       void showContextMenu(const QPoint &pt);
-
-   protected:
-      void enterEvent(QEvent*);
-      void focusInEvent(QFocusEvent*);
-      void keyPressEvent ( QKeyEvent * event );
-
-   private:
-      Exchange *exch;
-      int cur_height;
-      QTemporaryFile tmp;
-   };
-
-   // ------------
-   // -- Answer --
-   // ------------
-   class Answer : public OutputTextArea {
-      Q_OBJECT
-   public:
-      explicit Answer(Exchange*);
-   };
-
-   // --------------
-   // -- Exchange --
-   // --------------
-   class Exchange : public QFrame {
-      Q_OBJECT
-   public:
-      Exchange(Conversation*, int);
-
-      // The widget holding the query area
-      Question* question() { return &query; }
-      const Question* question() const { return &query; }
-
-      // The widget holding the reply area.
-      Answer* answer() { return &reply; }
-      const Answer* answer() const { return &reply; }
-
-      // Exchange number: children[i]->number()=i+1
-      int number() const { return no; };
-      // Exchange number: children[i]->set_number(i+1)
-      int set_number(int n) { no = n; return no; };
-
-      // Conversation
-      Conversation * conversation() { return win; };
-
-      // Reimplement position management.
-      QSize sizeHint() const;
-
-   public slots:
-
-   protected:
-      void resizeEvent(QResizeEvent*);
-
-   private:
-      Conversation* const win;
-      int no;
-      Question query;
-      Answer reply;
-   };
-
-   // Conversation banner, welcome greetings.
-   class Banner : public OutputTextArea {
-      typedef OutputTextArea Base;
-   public:
-      explicit Banner(Conversation*);
-   };
-
    // -- Set of conversations that make up a session.
    // -- We remember and number each topic so that we
    // -- can go back in the conversation set and reevaluate
@@ -188,16 +73,13 @@ namespace OpenAxiom {
       explicit Conversation(Debate*);
       ~Conversation();
 
-      //Debate* debate() const { return debate; }
-
-      // Holds if this conversation just started.
-      bool fresh() const { return children.empty(); }
-
       // Number of exchanges in this conversation
       int length() const { return children.size(); }
 
       // Return the `i'-th conversation in this set, if any.
       Exchange* operator[](int) const;
+      // Return a pointer to the current exchange, if any.
+      Exchange* exchange() { return cur_ex; }
 
       // Return the bottom left corner of the rectangle enclosing the
       // the set of exchanges in this conversation.
@@ -205,7 +87,8 @@ namespace OpenAxiom {
       
       // Existing topic
       Exchange* nth_topic(int n);
-
+      // Start a new conversation topic.
+      Exchange* new_topic();
       // set current topic
       void set_topic(Exchange * exch);
       
@@ -213,15 +96,11 @@ namespace OpenAxiom {
       // of all conversations so far.
       QSize sizeHint() const;
 
-      // Return a pointer to the current exchange, if any.
-      Exchange* exchange() { return cur_ex; }
-
-      // Start a new conversation topic.
-      Exchange* new_topic();
-
       void process_reply(QByteArray data);
+
       void resize_me2(QSize sz);
       void adjustConversation(int n);
+      void ensure_visibility(Exchange* e);
 
    public slots:
       // Return the topic following a given topic in this set of conversations

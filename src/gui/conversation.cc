@@ -159,7 +159,7 @@ namespace OpenAxiom {
        action = new QAction("Comment",this);
        action->setShortcut(QKeySequence(Qt::Key_Return + Qt::CTRL));
        menu->addAction(action);
-       connect(action,SIGNAL(triggered()),exchange()->conversation(),SLOT(comment()));
+       connect(action,SIGNAL(triggered()),exchange(),SLOT(comment()));
 
        action = new QAction("Delete",this);
        action->setShortcut(QKeySequence(Qt::Key_Delete + Qt::ALT));
@@ -279,20 +279,27 @@ namespace OpenAxiom {
       return sz;
    }
 
-   Server* Exchange::server() const {
-      return win->debate()->server();
-   }
-
    Exchange::Exchange(Conversation* conv, int n)
          : QFrame(conv), win(conv), no(n), query(this), reply(this) {
       setLineWidth(1);
       setFont(conv->font());
       move(conv->bottom_left());
-      connect(question(), SIGNAL(returnPressed()),
-              this, SLOT(send_query()));
-      // expect no reply!
-      connect(question(), SIGNAL(dontEvaluate()),
-              conv, SLOT(comment()));
+      connect(&query, SIGNAL(returnPressed()), conv, SLOT(send_query()  ));
+      connect(&query, SIGNAL(dontEvaluate() ), conv, SLOT(only_comment()));
+   }
+
+   void Conversation::send_query() {
+      QString input = exchange()->question()->toPlainText();
+      if (empty_string(input))
+         return;
+      exchange()->question()->file()->resize(0);
+      exchange()->question()->file()->write(input.toAscii());
+      exchange()->question()->file()->flush();
+      input = ")read " + exchange()->question()->file()->fileName() + " )quiet";
+      exchange()->question()->clearFocus();
+      prepare_reply_widget(this, cur_ex);
+      debate->server()->input(input);
+      QApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
    }
 
    static void ensure_visibility(Debate* debate, Exchange* e) {
@@ -306,20 +313,27 @@ namespace OpenAxiom {
          vbar->setValue(std::min(new_value, vbar->maximum()));
       e->question()->setFocus(Qt::OtherFocusReason);
    }
-   
-   void
-   Exchange::send_query() {
-      QString input = question()->toPlainText();
-      if (empty_string(input))
-         return;
-      question()->file()->resize(0);
-      question()->file()->write(input.toAscii());
-      question()->file()->flush();
-      input = ")read " + question()->file()->fileName() + " )quiet";
-      question()->clearFocus();
-      prepare_reply_widget(win, this);
-      server()->input(input);
-      QApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
+
+   void Conversation::only_comment() {
+       cur_out->clear();
+       cur_out->hide();
+       cur_out->resize(
+                   parentWidget()->width() - 2*our_margin(cur_out),
+                   cur_out->document()->size().height());
+       cur_out->resize(
+                   cur_out->document()->size().width(),
+                   cur_out->document()->size().height());
+       cur_ex->setStyleSheet("* { background-color: transparent; }");
+       exchange()->question()->setStyleSheet(
+                   "* { border-style: none; border-width: 1px; border-color:lightgray; }");
+       if (length() == 0) {
+           ensure_visibility(debate, new_topic());
+       }
+       else {
+           cur_ex->adjustSize();
+           ensure_visibility(debate, next());
+           QApplication::restoreOverrideCursor();
+       }
    }
 
    void Exchange::resizeEvent(QResizeEvent* e) {
@@ -363,7 +377,7 @@ namespace OpenAxiom {
 
    Conversation::Conversation(Debate* d)
          : QWidget(d),
-           win(d),
+           debate(d),
            greetings(this),
            cur_ex(),
            cur_out(&greetings),
@@ -387,8 +401,7 @@ namespace OpenAxiom {
       return children.back()->geometry().bottomLeft();
    }
 
-   static QSize
-   round_up_height(const QSize& sz, int height) {
+   static QSize round_up_height(const QSize& sz, int height) {
       if (height < 1)
          height = 1;
       const int n = (sz.height() + height) / height;
@@ -399,7 +412,7 @@ namespace OpenAxiom {
       const int n = length();
       if (n == 0)
          return minimum_preferred_size(this);
-      const int view_height = debate()->viewport()->height();
+      const int view_height = debate->viewport()->height();
       QSize sz = greetings.size();
       for (int i = 0; i < n; ++i)
          sz.rheight() += children[i]->height();
@@ -428,8 +441,7 @@ namespace OpenAxiom {
        cur_out = cur_ex->answer();
    }
 
-   Exchange*
-   Conversation::new_topic() {
+   Exchange* Conversation::new_topic() {
       Exchange* w = new Exchange(this, length() + 1);
       w->show();
       w->answer()->clear();
@@ -440,8 +452,7 @@ namespace OpenAxiom {
       return cur_ex = w;
    }
 
-   void
-   Conversation::delete_topic() {
+   void Conversation::delete_topic() {
        // Can't delete last topic
        if (exchange()->number()==length()) return;
        auto n = exchange()->number()-1;  // from 0..length()-1
@@ -454,8 +465,7 @@ namespace OpenAxiom {
        cur_ex->question()->setFocus(Qt::OtherFocusReason);
    }
 
-   void
-   Conversation::insert_topic() {
+   void Conversation::insert_topic() {
        auto n = exchange()->number()-1;  // from 0..length()-1
        children.insert(children.begin()+n,new Exchange(this,n));
        // renumber
@@ -488,8 +498,7 @@ namespace OpenAxiom {
        adjustSize();
    }
 
-   Exchange*
-   Conversation::next() {
+   Exchange* Conversation::next() {
        Exchange* w = cur_ex;
        if (w == 0 or w->number() == length()) {
            cur_ex = new_topic();
@@ -513,9 +522,8 @@ namespace OpenAxiom {
        cur_out->add_image(area,pos,s);
    }
 
-   void
-   Conversation::read_reply() {
-       auto data = debate()->server()->readAll();
+   void Conversation::read_reply() {
+       auto data = debate->server()->readAll();
        buf.append(QString::fromLocal8Bit(data));
        if (rx.indexIn(buf) == -1) return;
        // Found prompt, start processing
@@ -533,7 +541,7 @@ namespace OpenAxiom {
                if (tex) {
                    // Although single-threaded, getLatexFormula will yield to other QT signals
                    cur_out->align_left(".");
-                   debate()->latex()->process(texbuf,cur_out);
+                   debate->latex()->process(texbuf,cur_out);
                    texbuf = "";
                    tex = false;
                }
@@ -554,7 +562,7 @@ namespace OpenAxiom {
                    cur_out->align_left(s);
            cur_out->update();
        }
-       debate()->latex()->wait();
+       debate->latex()->wait();
 
        if (not empty_string(type)) {
            type = "";
@@ -566,7 +574,7 @@ namespace OpenAxiom {
        if (length() == 0) {
            if (not empty_string(prompt)) {
                prompt = "";
-               ensure_visibility(debate(), new_topic());
+               ensure_visibility(debate, new_topic());
            }
        }
        else {
@@ -576,33 +584,13 @@ namespace OpenAxiom {
            exchange()->adjustSize();
            if (not empty_string(prompt)) {
                prompt = "";
-               ensure_visibility(debate(), next());
+               ensure_visibility(debate, next());
                QApplication::restoreOverrideCursor();
            }
            else {
-               ensure_visibility(debate(), exchange());
+               ensure_visibility(debate, exchange());
            }
        }
-   }
-
-   void
-   Conversation::comment() {
-       cur_out->clear();
-       cur_out->hide();
-       cur_out->resize(parentWidget()->width() - 2*our_margin(cur_out),cur_out->document()->size().height());
-       cur_out->resize(cur_out->document()->size().width(),cur_out->document()->size().height());
-       exchange()->setStyleSheet("* { background-color: transparent; }");
-       exchange()->question()->setStyleSheet(
-                   "* { border-style: none; border-width: 1px; border-color:lightgray; }");
-       if (length() == 0) {
-           ensure_visibility(debate(), new_topic());
-       }
-       else {
-           exchange()->adjustSize();
-           ensure_visibility(debate(), next());
-           QApplication::restoreOverrideCursor();
-       };
-
    }
 
    QString render_html(QTextDocument *doc) {
@@ -649,18 +637,18 @@ namespace OpenAxiom {
                pos += ques.matchedLength();
                if (ques.cap(1)=="question") {
                if ((pos = ans.indexIn(buf,pos)) != -1) {
-                   exchange()->answer()->setHtml(ans.cap(1));
+                   cur_out->setHtml(ans.cap(1));
                    pos += ans.matchedLength();
-                   exchange()->answer()->show();
+                   cur_out->show();
                    cur_out->resize(cur_out->document()->size().width(),cur_out->document()->size().height());
                }
                exchange()->setStyleSheet("* { background-color: transparent; }");
                exchange()->question()->setStyleSheet(
                            "* { border-style: solid hidden hidden solid; border-width: 1px; border-color:lightgray;}");
                exchange()->adjustSize();
-               ensure_visibility(debate(), next());
+               ensure_visibility(debate, next());
                } else {
-                   comment();
+                   only_comment();
                }
            }
            f.close();

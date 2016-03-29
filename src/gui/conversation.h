@@ -97,6 +97,7 @@ namespace OpenAxiom {
       explicit Question(Exchange*);
       QSize sizeHint() const;
       QTemporaryFile* file() { return &tmp; }
+      // maybe this = parentWidget()?
       Exchange *exchange() { return exch; }
       // next(+1) or previous(-1) question
       void jump(int n);
@@ -142,7 +143,6 @@ namespace OpenAxiom {
       // The widget holding the query area
       Question* question() { return &query; }
       const Question* question() const { return &query; }
-      Server* server() const;
 
       // The widget holding the reply area.
       Answer* answer() { return &reply; }
@@ -159,17 +159,16 @@ namespace OpenAxiom {
       // Reimplement position management.
       QSize sizeHint() const;
 
+   public slots:
+
    protected:
       void resizeEvent(QResizeEvent*);
-      Conversation* const win;
 
    private:
+      Conversation* const win;
       int no;
       Question query;
       Answer reply;
-
-   private slots:
-      void send_query();
    };
 
    // Conversation banner, welcome greetings.
@@ -189,7 +188,7 @@ namespace OpenAxiom {
       explicit Conversation(Debate*);
       ~Conversation();
 
-      Debate* debate() const { return win; }
+      //Debate* debate() const { return debate; }
 
       // Holds if this conversation just started.
       bool fresh() const { return children.empty(); }
@@ -230,8 +229,6 @@ namespace OpenAxiom {
       // delete one of the children
       void delete_topic();
       void insert_topic();
-      // Target for dont_evaluate
-      void comment();
       void add_image(const QImage& s, OutputTextArea *area, int pos);
       // worksheet files
       void open_file();
@@ -241,19 +238,23 @@ namespace OpenAxiom {
       void write_file();
       void underline();
 
+   private slots:
+      void read_reply();
+      void send_query();
+      void only_comment();
+
+
    protected:
       void resizeEvent(QResizeEvent*);
       //void paintEvent(QPaintEvent*);
 
-   private slots:
-      void read_reply();
-
    private:
       typedef std::vector<Exchange*> Children;
-      Debate* const win;
+      Debate* const debate;
       Banner greetings;
       Children children;
       Exchange* cur_ex;
+      // = exchange()->answer()
       OutputTextArea* cur_out;
       QRegExp rx;
       QRegExp tx;

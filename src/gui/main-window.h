@@ -62,7 +62,6 @@ namespace OpenAxiom {
       Server srv;
       Debate *debate;
       QTabWidget tabs;
-      void read_databases();
    };
 }
 

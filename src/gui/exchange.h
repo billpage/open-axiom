@@ -96,6 +96,10 @@ namespace OpenAxiom {
        void fontSize(const QString &size);
        void fontName(const QString &name);
        void style(int styleIndex);
+       void insert_row();
+       void insert_column();
+       void delete_row();
+       void delete_column();
 
    protected:
       void enterEvent(QEvent*);

@@ -152,6 +152,26 @@ namespace OpenAxiom {
        menu->addAction(action);
        connect(action,SIGNAL(triggered()),conv,SLOT(insert_topic()));
 
+       if (textCursor().currentTable()) {
+           menu->addSeparator();
+           action = new QAction("Insert Row",this);
+           action->setShortcut(QKeySequence(Qt::Key_Insert + Qt::ALT + Qt::CTRL));
+           menu->addAction(action);
+           connect(action,SIGNAL(triggered()),this,SLOT(insert_row()));
+           action = new QAction("Delete Row",this);
+           action->setShortcut(QKeySequence(Qt::Key_Delete + Qt::ALT + Qt::CTRL));
+           menu->addAction(action);
+           connect(action,SIGNAL(triggered()),this,SLOT(delete_row()));
+           action = new QAction("Insert Column",this);
+           action->setShortcut(QKeySequence(Qt::Key_Insert + Qt::ALT + Qt::CTRL));
+           menu->addAction(action);
+           connect(action,SIGNAL(triggered()),this,SLOT(insert_column()));
+           action = new QAction("Delete Column",this);
+           action->setShortcut(QKeySequence(Qt::Key_Insert + Qt::ALT + Qt::CTRL));
+           menu->addAction(action);
+           connect(action,SIGNAL(triggered()),this,SLOT(delete_column()));
+       }
+
        menu->exec(this->mapToGlobal(pt));
        delete menu;
    }
@@ -415,6 +435,62 @@ namespace OpenAxiom {
         }
         setTextCursor(cursor);
     }
+
+   void Question::insert_row() {
+       QTextCursor cursor = textCursor();
+       cursor.beginEditBlock();
+       QTextBlockFormat blockFmt = cursor.blockFormat();
+       QTextTableFormat table_format;
+
+       if (cursor.currentTable()) {
+           auto cell = cursor.currentTable()->cellAt(cursor);
+           cursor.currentTable()->insertRows(cell.row(),1);
+       }
+       cursor.endEditBlock();
+       setTextCursor(cursor);
+   }
+
+   void Question::insert_column() {
+       QTextCursor cursor = textCursor();
+       cursor.beginEditBlock();
+       QTextBlockFormat blockFmt = cursor.blockFormat();
+       QTextTableFormat table_format;
+
+       if (cursor.currentTable()) {
+           auto cell = cursor.currentTable()->cellAt(cursor);
+           cursor.currentTable()->insertColumns(cell.column(),1);
+       }
+       cursor.endEditBlock();
+       setTextCursor(cursor);
+   }
+
+   void Question::delete_row() {
+       QTextCursor cursor = textCursor();
+       cursor.beginEditBlock();
+       QTextBlockFormat blockFmt = cursor.blockFormat();
+       QTextTableFormat table_format;
+
+       if (cursor.currentTable()) {
+           auto cell = cursor.currentTable()->cellAt(cursor);
+           cursor.currentTable()->removeRows(cell.row(),1);
+       }
+       cursor.endEditBlock();
+       setTextCursor(cursor);
+   }
+   void Question::delete_column() {
+       QTextCursor cursor = textCursor();
+       cursor.beginEditBlock();
+       QTextBlockFormat blockFmt = cursor.blockFormat();
+       QTextTableFormat table_format;
+
+       if (cursor.currentTable()) {
+           auto cell = cursor.currentTable()->cellAt(cursor);
+           cursor.currentTable()->removeColumns(cell.column(),1);
+       }
+       cursor.endEditBlock();
+       setTextCursor(cursor);
+   }
+
    // ------------
    // -- Answer --
    // ------------

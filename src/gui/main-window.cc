@@ -109,7 +109,6 @@ namespace OpenAxiom {
       // Fix this
       connect(action, SIGNAL(triggered()), debate->conversation(), SLOT(send_query()));
 
-
       menu = menuBar()->addMenu(tr("&Edit"));
       action = new QAction(tr("Read Input"), this);
       action->setShortcut(tr("Ctrl+R"));

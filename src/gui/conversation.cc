@@ -278,6 +278,9 @@ namespace OpenAxiom {
    }
 
    Exchange* Conversation::next() {
+       auto cur_in = exchange()->question()->textCursor();
+       cur_in.clearSelection();
+       exchange()->question()->setTextCursor(cur_in);
        Exchange* w = cur_ex;
        if (w == 0 or w->number() == length()) {
            cur_ex = new_topic();
@@ -504,15 +507,5 @@ namespace OpenAxiom {
            f.close();
        } else
            QMessageBox::information(0, "error", f.errorString());
-   }
-
-   void Conversation::underline() {
-       QTextCharFormat format;
-       format.setFontUnderline(true);
-       QTextCursor cursor = exchange()->question()->textCursor();
-       if (!cursor.hasSelection())
-          cursor.select(QTextCursor::WordUnderCursor);
-       cursor.mergeCharFormat(format);
-       exchange()->question()->mergeCurrentCharFormat(format);
    }
 }

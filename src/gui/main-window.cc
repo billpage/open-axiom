@@ -66,6 +66,7 @@ namespace OpenAxiom {
       setWindowTitle("OpenAxiom");
       // why pointer?
       debate = new Debate(this);
+      conv = debate->conversation();
       tabs.addTab(debate, "Interpreter");
       auto s = debate->widget()->frameSize();
       s.rwidth() += debate->verticalScrollBar()->width();
@@ -119,79 +120,85 @@ namespace OpenAxiom {
       menu->addAction(action);
       connect(action, SIGNAL(triggered()), debate->conversation(), SLOT(write_file()));
       menu->addSeparator();
-      action = new QAction(tr("&Undo"), this);
-      action->setShortcut(QKeySequence::Undo);
-      menu->addAction(action);
-      action = new QAction(tr("&Redo"), this);
-      action->setShortcut(QKeySequence::Redo);
-      menu->addAction(action);
+      conv->undo = new QAction(tr("&Undo"), this);
+      conv->undo->setShortcut(QKeySequence::Undo);
+      menu->addAction(conv->undo);
+      conv->redo = new QAction(tr("&Redo"), this);
+      conv->redo->setShortcut(QKeySequence::Redo);
+      menu->addAction(conv->redo);
       menu->addSeparator();
-      action = new QAction(tr("Cu&t"), this);
-      action->setShortcut(QKeySequence::Cut);
-      menu->addAction(action);
-      action = new QAction(tr("&Copy"), this);
-      action->setShortcut(QKeySequence::Copy);
-      menu->addAction(action);
-      action = new QAction(tr("&Paste"), this);
-      action->setShortcut(QKeySequence::Paste);
-      menu->addAction(action);
+      conv->cut = new QAction(tr("Cu&t"), this);
+      conv->cut->setShortcut(QKeySequence::Cut);
+      menu->addAction(conv->cut);
+      conv->copy = new QAction(tr("&Copy"), this);
+      conv->copy->setShortcut(QKeySequence::Copy);
+      menu->addAction(conv->copy);
+      conv->paste = new QAction(tr("&Paste"), this);
+      conv->paste->setShortcut(QKeySequence::Paste);
+      menu->addAction(conv->paste);
+      menu->addSeparator();
+      conv->insert_list = new QAction(tr("Insert &List"), this);
+      conv->insert_list->setShortcut(Qt::CTRL + Qt::Key_L);
+      menu->addAction(conv->insert_list);
+      conv->insert_table = new QAction(tr("Insert &Table"), this);
+      conv->insert_table->setShortcut(Qt::CTRL + Qt::Key_E);
+      menu->addAction(conv->insert_table);
 
       menu = menuBar()->addMenu(tr("F&ormat"));
-      action = new QAction(tr("&Underline"), this);
-      menu->addAction(action);
-      action->setShortcut(QKeySequence());
-      connect(action, SIGNAL(triggered()), debate->conversation(), SLOT(underline()));
 
-      action = new QAction(tr("&Bold"), this);
-      action->setShortcut(Qt::CTRL + Qt::Key_B);
-      QFont bold;
-      bold.setBold(true);
-      action->setFont(bold);
-      action->setCheckable(true);
-      menu->addAction(action);
-      connect(action, SIGNAL(triggered()), debate->conversation(), SLOT(textBold()));
+      // These actions belong to Conversation and connect to the current Question.
+      conv->bold = new QAction(tr("&Bold"), this);
+      conv->bold->setShortcut(Qt::CTRL + Qt::Key_B);
+      QFont bold; bold.setBold(true); conv->bold->setFont(bold);
+      conv->bold->setCheckable(true);
+      menu->addAction(conv->bold);
 
-      action = new QAction(tr("&Italic"), this);
-      action->setShortcut(Qt::CTRL + Qt::Key_I);
-      QFont italic;
-      italic.setItalic(true);
-      action->setFont(italic);
-      action->setCheckable(true);
-      menu->addAction(action);
-      connect(action, SIGNAL(triggered()), this, SLOT(textItalic()));
+      conv->italic = new QAction(tr("&Italic"), this);
+      conv->italic->setShortcut(Qt::CTRL + Qt::Key_I);
+      QFont italic; italic.setItalic(true); conv->italic->setFont(italic);
+      conv->italic->setCheckable(true);
+      menu->addAction(conv->italic);
 
-      auto actionTextUnderline = new QAction(tr("&Underline"), this);
-      actionTextUnderline->setShortcut(Qt::CTRL + Qt::Key_U);
-      actionTextUnderline->setPriority(QAction::LowPriority);
-      QFont underline;
-      underline.setUnderline(true);
-      actionTextUnderline->setFont(underline);
-      actionTextUnderline->setCheckable(true);
-      connect(actionTextUnderline, SIGNAL(triggered()), this, SLOT(textUnderline()));
-      menu->addAction(actionTextUnderline);
+      conv->underline = new QAction(tr("&Underline"), this);
+      conv->underline->setShortcut(Qt::CTRL + Qt::Key_U);
+      QFont underline; underline.setUnderline(true); conv->underline->setFont(underline);
+      conv->underline->setCheckable(true);
+      menu->addAction(conv->underline);
+
+      QAction* font;
+      font = new QAction(tr("&Font"), this);
+      font->setShortcut(Qt::CTRL + Qt::Key_F);
+      font->setCheckable(true);
+      menu->addAction(font);
 
       menu->addSeparator();
 
       QActionGroup *grp = new QActionGroup(this);
-      connect(grp, SIGNAL(triggered(QAction*)), this, SLOT(textAlign(QAction*)));
+      //connect(grp, SIGNAL(triggered(QAction*)), debate->conversation(), SLOT(align(QAction*)));
 
-      auto actionAlignLeft = new QAction(tr("&Left"), grp);
-      auto actionAlignCenter = new QAction(tr("C&enter"), grp);
-      auto actionAlignRight = new QAction(tr("&Right"), grp);
-      auto actionAlignJustify = new QAction(tr("&Justify"), grp);
-      actionAlignLeft->setShortcut(Qt::CTRL + Qt::Key_L);
-      actionAlignLeft->setCheckable(true);
-      actionAlignLeft->setPriority(QAction::LowPriority);
-      actionAlignCenter->setShortcut(Qt::CTRL + Qt::Key_E);
-      actionAlignCenter->setCheckable(true);
-      actionAlignCenter->setPriority(QAction::LowPriority);
-      actionAlignRight->setShortcut(Qt::CTRL + Qt::Key_R);
-      actionAlignRight->setCheckable(true);
-      actionAlignRight->setPriority(QAction::LowPriority);
-      actionAlignJustify->setShortcut(Qt::CTRL + Qt::Key_J);
-      actionAlignJustify->setCheckable(true);
-      actionAlignJustify->setPriority(QAction::LowPriority);
+      conv->alignLeft = new QAction(tr("&Left"), grp);
+      conv->alignLeft->setShortcut(Qt::CTRL + Qt::Key_L);
+      conv->alignLeft->setCheckable(true);
+
+      conv->alignCenter = new QAction(tr("C&enter"), grp);
+      conv->alignCenter->setShortcut(Qt::CTRL + Qt::Key_E);
+      conv->alignCenter->setCheckable(true);
+
+      conv->alignRight = new QAction(tr("&Right"), grp);
+      conv->alignRight->setShortcut(Qt::CTRL + Qt::Key_R);
+      conv->alignRight->setCheckable(true);
+
+      conv->alignJustify = new QAction(tr("&Justify"), grp);
+      conv->alignJustify->setShortcut(Qt::CTRL + Qt::Key_J);
+      conv->alignJustify->setCheckable(true);
+
       menu->addActions(grp->actions());
+
+      QAction* style;
+      style = new QAction(tr("&Style"), this);
+      style->setShortcut(Qt::CTRL + Qt::Key_S);
+      style->setCheckable(true);
+      menu->addAction(style);
 
       menu->addSeparator();
 
@@ -199,46 +206,46 @@ namespace OpenAxiom {
       connect(actionTextColor, SIGNAL(triggered()), this, SLOT(textColor()));
       menu->addAction(actionTextColor);
 
-      auto tb = new QToolBar(this);
-      //tb->setAllowedAreas(Qt::TopToolBarArea | Qt::BottomToolBarArea);
-      tb->setWindowTitle(tr("Format Actions"));
-      addToolBarBreak(Qt::TopToolBarArea);
-      addToolBar(tb);
+      auto tb1 = new QToolBar(this);
+      tb1->hide();
+      tb1->setWindowTitle(tr("Font Actions"));
+      addToolBar(tb1);
 
-      auto comboStyle = new QComboBox(tb);
-      tb->addWidget(comboStyle);
-      comboStyle->addItem("Standard");
-      comboStyle->addItem("Bullet List (Disc)");
-      comboStyle->addItem("Bullet List (Circle)");
-      comboStyle->addItem("Bullet List (Square)");
-      comboStyle->addItem("Ordered List (Decimal)");
-      comboStyle->addItem("Ordered List (Alpha lower)");
-      comboStyle->addItem("Ordered List (Alpha upper)");
-      comboStyle->addItem("Ordered List (Roman lower)");
-      comboStyle->addItem("Ordered List (Roman upper)");
-      connect(comboStyle, SIGNAL(activated(int)),
-              this, SLOT(textStyle(int)));
+      conv->style = new QComboBox(tb1);
+      tb1->addWidget(conv->style);
+      conv->style->addItem("Standard");
+      conv->style->addItem("Bullet List (Disc)");
+      conv->style->addItem("Bullet List (Circle)");
+      conv->style->addItem("Bullet List (Square)");
+      conv->style->addItem("Ordered List (Decimal)");
+      conv->style->addItem("Ordered List (Alpha lower)");
+      conv->style->addItem("Ordered List (Alpha upper)");
+      conv->style->addItem("Ordered List (Roman lower)");
+      conv->style->addItem("Ordered List (Roman upper)");
 
-      auto comboFont = new QFontComboBox(tb);
-      tb->addWidget(comboFont);
-      connect(comboFont, SIGNAL(activated(QString)),
-              this, SLOT(textFamily(QString)));
+      connect(style, SIGNAL(toggled(bool)), tb1, SLOT(setVisible(bool)));
 
-      auto comboSize = new QComboBox(tb);
-      comboSize->setObjectName("comboSize");
-      tb->addWidget(comboSize);
-      comboSize->setEditable(true);
+      auto tb2 = new QToolBar(this);
+      tb2->hide();
+      tb2->setWindowTitle(tr("Style Actions"));
+      addToolBar(tb2);
+
+      conv->fontName = new QFontComboBox(tb2);
+      tb2->addWidget(conv->fontName);
+
+      conv->fontSize = new QComboBox(tb2);
+      conv->fontSize->setObjectName("comboSize");
+      tb2->addWidget(conv->fontSize);
+      conv->fontSize->setEditable(true);
 
       QFontDatabase db;
       foreach(int size, db.standardSizes())
-          comboSize->addItem(QString::number(size));
+          conv->fontSize->addItem(QString::number(size));
 
-      connect(comboSize, SIGNAL(activated(QString)),
-              this, SLOT(textSize(QString)));
-      comboSize->setCurrentIndex(comboSize->findText(QString::number(QApplication::font()
+      conv->fontSize->setCurrentIndex(conv->fontSize->findText(QString::number(QApplication::font()
                                                                      .pointSize())));
 
-
+      connect(font, SIGNAL(toggled(bool)), tb2, SLOT(setVisible(bool)));
 
 
       latexthread = new LatexThread();

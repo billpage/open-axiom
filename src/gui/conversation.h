@@ -45,6 +45,8 @@
 #include <QResizeEvent>
 #include <QPaintEvent>
 #include <QRegExp>
+#include <QComboBox>
+#include <QFontComboBox>
 #include "server.h"
 #include "exchange.h"
 #include "klfbackend.h"
@@ -102,6 +104,18 @@ namespace OpenAxiom {
       void adjustConversation(int n);
       void ensure_visibility(Exchange* e);
 
+      QAction *undo, *redo;
+      QAction *bold, *italic, *underline;
+      QAction *cut, *copy, *paste;
+      QAction *insert_list, *insert_table;
+      QAction* alignLeft;
+      QAction* alignCenter;
+      QAction* alignRight;
+      QAction* alignJustify;
+      QComboBox* fontSize;
+      QComboBox* style;
+      QFontComboBox* fontName;
+
    public slots:
       // Return the topic following a given topic in this set of conversations
       Exchange* next();
@@ -115,7 +129,6 @@ namespace OpenAxiom {
       // input files
       void read_file();
       void write_file();
-      void underline();
 
    private slots:
       void read_reply();

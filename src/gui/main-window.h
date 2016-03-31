@@ -61,6 +61,7 @@ namespace OpenAxiom {
    private:
       Server srv;
       Debate *debate;
+      Conversation *conv;
       QTabWidget tabs;
    };
 }

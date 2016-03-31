@@ -72,13 +72,11 @@ namespace OpenAxiom {
       explicit Question(Exchange*);
       QSize sizeHint() const;
       QTemporaryFile* file() { return &tmp; }
-      // maybe this = parentWidget()?
-      Exchange *exchange() { return exch; }
       // next(+1) or previous(-1) question
       void jump(int n);
 
    signals:
-       void returnPressed();
+       void doEvaluate();
        void dontEvaluate();
 
    private slots:
@@ -86,6 +84,18 @@ namespace OpenAxiom {
 
    public slots:
        void showContextMenu(const QPoint &pt);
+       void insert_list();
+       void insert_table();
+       void underline(bool flag);
+       void bold(bool flag);
+       void italic(bool flag);
+       void alignLeft();
+       void alignCenter();
+       void alignRight();
+       void alignJustify();
+       void fontSize(const QString &size);
+       void fontName(const QString &name);
+       void style(int styleIndex);
 
    protected:
       void enterEvent(QEvent*);
@@ -94,6 +104,7 @@ namespace OpenAxiom {
 
    private:
       Exchange *exch;
+      Conversation *conv;
       int cur_height;
       QTemporaryFile tmp;
    };

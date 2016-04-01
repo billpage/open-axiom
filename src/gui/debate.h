@@ -52,7 +52,6 @@ namespace OpenAxiom {
       Conversation* conversation() { return &conv; }
       Server* server() const;
       LatexThread* latex() const;
-      //QSize sizeHint() const;
 
    protected:
       void resizeEvent(QResizeEvent*);

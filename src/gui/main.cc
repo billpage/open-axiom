@@ -43,7 +43,7 @@ void myMessageOutput(QtMsgType type, const char *msg)
          fprintf(stderr, "Debug: %s\n", msg);
          break;
      case QtWarningMsg:
-         fprintf(stderr, "Warning: %s\n", msg);
+         fprintf(stderr, "My Warning: %s\n", msg);
          break;
      case QtCriticalMsg:
          fprintf(stderr, "Critical: %s\n", msg);

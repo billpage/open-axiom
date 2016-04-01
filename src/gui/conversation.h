@@ -47,6 +47,7 @@
 #include <QRegExp>
 #include <QComboBox>
 #include <QFontComboBox>
+#include "filedownloader.h"
 #include "server.h"
 #include "exchange.h"
 #include "klfbackend.h"
@@ -115,6 +116,7 @@ namespace OpenAxiom {
       QComboBox* fontSize;
       QComboBox* style;
       QFontComboBox* fontName;
+      QTemporaryFile tmpSPAD;
 
    public slots:
       // Return the topic following a given topic in this set of conversations
@@ -129,12 +131,13 @@ namespace OpenAxiom {
       // input files
       void read_file();
       void write_file();
+      void download_html();
 
    private slots:
       void read_reply();
       void send_query();
       void only_comment();
-
+      void load_html();
 
    protected:
       void resizeEvent(QResizeEvent*);
@@ -155,6 +158,8 @@ namespace OpenAxiom {
       KLFBackend::klfSettings settings;
       KLFBackend::klfInput input;
       KLFBackend::klfOutput output;
+
+      FileDownloader* fetch;
    };
 }
 

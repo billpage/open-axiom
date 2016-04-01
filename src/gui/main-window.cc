@@ -91,6 +91,28 @@ namespace OpenAxiom {
       action->setShortcut(tr("Ctrl+Q"));
       menu->addAction(action);
       connect(action, SIGNAL(triggered()), this, SLOT(close()));
+      menu->addSeparator();
+      action = new QAction(tr("Read Input"), this);
+      action->setShortcut(tr("Ctrl+R"));
+      menu->addAction(action);
+      connect(action, SIGNAL(triggered()), debate->conversation(), SLOT(read_file()));
+      action = new QAction(tr("Write Input"), this);
+      action->setShortcut(tr("Ctrl+W"));
+      menu->addAction(action);
+      connect(action, SIGNAL(triggered()), debate->conversation(), SLOT(write_file()));
+      menu->addSeparator();
+      action = new QAction(tr("Download HTML"), this);
+      //action->setShortcut(tr("Ctrl+R"));
+      menu->addAction(action);
+      connect(action, SIGNAL(triggered()), debate->conversation(), SLOT(download_html()));
+      action = new QAction(tr("Read HTML"), this);
+      //action->setShortcut(tr("Ctrl+R"));
+      menu->addAction(action);
+      connect(action, SIGNAL(triggered()), debate->conversation(), SLOT(read_html()));
+      action = new QAction(tr("Write HTML"), this);
+      //action->setShortcut(tr("Ctrl+W"));
+      menu->addAction(action);
+      connect(action, SIGNAL(triggered()), debate->conversation(), SLOT(write_html()));
 
       menu = menuBar()->addMenu(tr("E&xecute"));
       action = new QAction(tr("Comment Selection"), this);
@@ -110,15 +132,6 @@ namespace OpenAxiom {
       connect(action, SIGNAL(triggered()), debate->conversation(), SLOT(send_query()));
 
       menu = menuBar()->addMenu(tr("&Edit"));
-      action = new QAction(tr("Read Input"), this);
-      action->setShortcut(tr("Ctrl+R"));
-      menu->addAction(action);
-      connect(action, SIGNAL(triggered()), debate->conversation(), SLOT(read_file()));
-      action = new QAction(tr("Write Input"), this);
-      action->setShortcut(tr("Ctrl+W"));
-      menu->addAction(action);
-      connect(action, SIGNAL(triggered()), debate->conversation(), SLOT(write_file()));
-      menu->addSeparator();
       conv->undo = new QAction(tr("&Undo"), this);
       conv->undo->setShortcut(QKeySequence::Undo);
       menu->addAction(conv->undo);

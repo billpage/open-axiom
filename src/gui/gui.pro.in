@@ -51,7 +51,7 @@ TARGET = open-axiom
 VPATH += @srcdir@
 
 ## Our headers
-HEADERS += server.h latexthread.h conversation.h main-window.h debate.h
+HEADERS += server.h latexthread.h filedownloader.h exchange.h conversation.h debate.h main-window.h
 INCLUDEPATH += $$OA_INC
 INCLUDEPATH +=  @srcdir@
 INCLUDEPATH += @top_srcdir@/src/include
@@ -60,7 +60,7 @@ DEPENDPATH += @srcdir@
 INCLUDEPATH += $$KLF_INC
 
 ## Source files
-SOURCES += server.cc latexthread.cc conversation.cc main-window.cc debate.cc main.cc
+SOURCES += server.cc latexthread.cc filedownloader.cc exchange.cc conversation.cc debate.cc main-window.cc main.cc
 
 ## Additional support libraries
 LIBS += $$OA_LIB

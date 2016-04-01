@@ -40,6 +40,7 @@
 #include <QPlainTextEdit>
 #include <QTemporaryFile>
 #include <QTextEdit>
+#include <QTextBrowser>
 #include <QFont>
 #include <QEvent>
 #include <QResizeEvent>
@@ -66,7 +67,7 @@ namespace OpenAxiom {
    // -- Question --
    // ---------------
    // A question is a multi-line query area.
-   class Question : public QTextEdit {
+   class Question : public QTextBrowser {
        Q_OBJECT
    public:
       explicit Question(Exchange*);
@@ -81,6 +82,7 @@ namespace OpenAxiom {
 
    private slots:
        void dirtyText();
+       void click_link(QUrl url);
 
    public slots:
        void showContextMenu(const QPoint &pt);

@@ -46,6 +46,7 @@
 #include <QKeyEvent>
 #include <QBuffer>
 #include <QFileDialog>
+#include <QInputDialog>
 #include <QMenu>
 #include "conversation.h"
 #include "debate.h"
@@ -170,10 +171,21 @@ namespace OpenAxiom {
       QString input = exchange()->question()->toPlainText();
       if (empty_string(input))
          return;
-      exchange()->question()->file()->resize(0);
-      exchange()->question()->file()->write(input.toAscii());
-      exchange()->question()->file()->flush();
-      input = ")read " + exchange()->question()->file()->fileName() + " )quiet";
+      if (input.startsWith(")abbrev ")) {
+          // file name must be .spad for compiler
+          qDebug()<<"must be spad";
+          tmpSPAD.setFileTemplate("/tmp/axiomXXXXXX.spad");
+          if (not tmpSPAD.open()) qDebug()<<"failed open";
+          qDebug()<<"opened"<<tmpSPAD.fileName();
+          tmpSPAD.write(input.toAscii());
+          tmpSPAD.flush();
+          input = ")compile " + tmpSPAD.fileName()  + " )quiet";
+      } else {
+          exchange()->question()->file()->resize(0);
+          exchange()->question()->file()->write(input.toAscii());
+          exchange()->question()->file()->flush();
+          input = ")read " + exchange()->question()->file()->fileName() + " )quiet";
+      }
       exchange()->question()->clearFocus();
       exchange()->prepare_reply_widget();
       debate->server()->input(input);
@@ -409,9 +421,12 @@ namespace OpenAxiom {
        QFile f( fn );
        if (f.open(QFile::ReadOnly)) {
            QString buf = f.readAll();
-           QRegExp ques("<div class=\"(question|comment)\">\\n(<p .*>.*</p>)\\n</div>");
+           // We aren't interested in class="open-axiom-banner".
+           QRegExp ques("<div class=\"(open-axiom-question|open-axiom-comment)\">\\n"
+                        "((<p .*>.*</p>\\n|<table .*>.*</table>\\n|<ol .*>.*</ol>\\n)+)"
+                        "</div>");
            ques.setMinimal(true);
-           QRegExp ans("<div class=\"answer\">\\n(<p .*>.*</p>)\\n</div>");
+           QRegExp ans("<div class=\"open-axiom-answer\">\\n(<p .*>.*</p>)\\n</div>");
            ans.setMinimal(true);
            int pos = 0;
            while ((pos = ques.indexIn(buf,pos)) != -1) {
@@ -450,12 +465,12 @@ namespace OpenAxiom {
                   "<head><meta name=\"qrichtext\" content=\"1\" />\n"
                   "<style type=\"text/css\">\n"
                   "p, li { white-space: pre-wrap; }"
-                  ".question { border-style: solid hidden hidden solid; border-width: thin;"
+                  ".open-axiom-question { border-style: solid hidden hidden solid; border-width: thin;"
                               "padding:2px; padding-left:1em; margin-bottom:1em; }\n"
-                  ".answer { border-style: hidden solid solid hidden; border-width: thin;"
+                  ".open-axiom-answer { border-style: hidden solid solid hidden; border-width: thin;"
                               "padding:2px; margin-bottom:1em; }\n"
-                  ".comment { border-style: none; padding:2px; margin-bottom:1em; }\n"
-                  ".banner { border-style: none; padding:2px; margin-bottom:1em;"
+                  ".open-axiom-comment { border-style: none; padding:2px; margin-bottom:1em; }\n"
+                  ".open-axiom-banner { border-style: none; padding:2px; margin-bottom:1em;"
                             "font-family: monospace; text-align:center; }\n"
                   "</style>\n"
                   "</head>\n"
@@ -466,16 +481,16 @@ namespace OpenAxiom {
            out << "</div>\n";
            for (auto i=0;i<length();i++) {
                if (children[i]->answer()->isHidden() ) {
-                   out << "<div class=\"comment\">\n";
+                   out << "<div class=\"open-axiom-comment\">\n";
                    doc = children[i]->question()->document();
                    out << render_html(doc) << "\n";
                    out << "</div>\n";
                } else {
-                   out << "<div class=\"question\">\n";
+                   out << "<div class=\"open-axiom-question\">\n";
                    doc = children[i]->question()->document();
                    out << render_html(doc) << "\n";
                    out << "</div>\n";
-                   out << "<div class=\"answer\">\n";
+                   out << "<div class=\"open-axiom-answer\">\n";
                    doc = children[i]->answer()->document();
                    out << render_html(doc) << "\n";
                    out << "</div>\n";
@@ -508,4 +523,35 @@ namespace OpenAxiom {
        } else
            QMessageBox::information(0, "error", f.errorString());
    }
+
+   void Conversation::download_html() {
+
+       QUrl url;
+       do {
+           bool ok = true;
+           url = QUrl::fromUserInput(QInputDialog::getText(this, tr("Fetch from URL"), tr("Enter URL:"), QLineEdit::Normal, QString(), &ok));
+           if (!ok) return;
+       } while (!url.isValid());
+       qDebug()<<url;
+       fetch = new FileDownloader(url, this);
+       connect(fetch, SIGNAL (downloaded()), this, SLOT (load_html()));
+       QApplication::setOverrideCursor(Qt::WaitCursor);
+   }
+
+   void Conversation::load_html() {
+       QApplication::restoreOverrideCursor();
+       if (fetch->error()) QMessageBox::critical(0, "error",fetch->errorString());
+       else {
+           auto buf = fetch->downloadedData();
+           if (not buf.isEmpty()) {
+               qDebug() << "MimeType"<<fetch->mimeType();
+               if (fetch->mimeType()=="text/plain; charset=UTF-8") exchange()->question()->setPlainText(buf);
+               else exchange()->question()->setHtml(buf);
+               exchange()->adjustSize();
+               ensure_visibility(next());
+           }
+       }
+   }
+
+
 }

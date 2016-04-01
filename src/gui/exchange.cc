@@ -104,9 +104,10 @@ namespace OpenAxiom {
    // --------------
    // -- Question --
    // --------------
-   Question::Question(Exchange* e) : QTextEdit(e) {
+   Question::Question(Exchange* e) : QTextBrowser(e) {
       setStyleSheet("* { border-style: solid hidden hidden solid; border-width: 1px; border-color:gray;}");
       setFont(e->font());
+      setReadOnly(false);
       setAcceptRichText(true);
       setViewportMargins(0, 0, 0, 0);
       setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding);
@@ -123,6 +124,11 @@ namespace OpenAxiom {
       setContextMenuPolicy(Qt::CustomContextMenu);
       connect(this,SIGNAL(customContextMenuRequested(const QPoint&)),
               this,SLOT(showContextMenu(const QPoint &)));
+      connect(this,SIGNAL(anchorClicked(QUrl)),this,SLOT(click_link(QUrl)));
+   }
+
+   void Question::click_link(QUrl url) {
+       qDebug()<< url;
    }
 
    void Question::showContextMenu(const QPoint &pt)
@@ -356,25 +362,20 @@ namespace OpenAxiom {
    void Question::insert_table() {
        QTextCursor cursor = textCursor();
        cursor.beginEditBlock();
-       QTextBlockFormat blockFmt = cursor.blockFormat();
        QTextTableFormat table_format;
-
        if (cursor.currentTable()) {
            table_format = cursor.currentTable()->format();
-           table_format.setHeaderRowCount(1);
-           QVector<QTextLength> constr;
-           constr.push_back(QTextLength(QTextLength::PercentageLength, 30));
-           constr.push_back(QTextLength(QTextLength::PercentageLength, 30));
-           constr.push_back(QTextLength(QTextLength::PercentageLength, 30));
-           table_format.setColumnWidthConstraints(constr);
-       } else {
-           table_format.setHeaderRowCount(1);
-           blockFmt.setIndent(0);
-           cursor.setBlockFormat(blockFmt);
-       }
+       };
+       table_format.setHeaderRowCount(1);
+       QVector<QTextLength> constr;
+       constr.push_back(QTextLength(QTextLength::PercentageLength, 33.3));
+       constr.push_back(QTextLength(QTextLength::PercentageLength, 33.3));
+       constr.push_back(QTextLength(QTextLength::PercentageLength, 33.3));
+       table_format.setColumnWidthConstraints(constr);
        auto style = QTextTableFormat::BorderStyle_Solid;
        table_format.setBorderStyle(style);
-       table_format.setCellPadding (5);
+       table_format.setCellPadding(5);
+       table_format.setMargin(60);
        cursor.insertTable(3,3,table_format);
        cursor.endEditBlock();
        setTextCursor(cursor);

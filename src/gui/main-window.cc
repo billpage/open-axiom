@@ -52,13 +52,6 @@ namespace OpenAxiom {
       QMessageBox::critical(this, tr("System error"), s);
    }
 
-   static void connect_server_io(MainWindow* win, Debate* debate) {
-      QObject::connect(win->server(), SIGNAL(readyReadStandardError()),
-                       win, SLOT(display_error()));
-      QObject::connect( win->server(), SIGNAL(readyReadStandardOutput()),
-                       debate->conversation(), SLOT(read_reply()));
-   }
-
    MainWindow::MainWindow(int argc, char* argv[])
          : srv(argc, argv), tabs(this) {
 
@@ -269,20 +262,32 @@ namespace OpenAxiom {
       // wait to be pinged before displaying a prompt.  This is
       // an unfortunate result of a rather awkward hack.
       server()->launch();
+      connect(server(), SIGNAL(finished(int,QProcess::ExitStatus)), this, SLOT(done(int,QProcess::ExitStatus)));
+      connect(server(), SIGNAL(readyReadStandardError()), this, SLOT(display_error()));
+      connect(server(), SIGNAL(readyReadStandardOutput()), debate->conversation(), SLOT(read_reply()));
       // Why this?
       //read_databases();
-      connect_server_io(this, debate);
       server()->input(")read init.input )quiet");
    }
 
    MainWindow::~MainWindow() {
    }
 
-   MainWindow *newMW;
+   void MainWindow::closeEvent(QCloseEvent *event)
+   {
+       if (debate->conversation()->maybeSave()) {
+           //writeSettings();
+           event->accept();
+       } else {
+           event->ignore();
+       }
+   }
 
    void MainWindow::done(int s, QProcess::ExitStatus) {
       // For the time being, shut done the whole application
       // if the interpreter quits.  FIXME.
+      if (debate->conversation()->maybeSave()) return;
+      QMessageBox::critical(this, tr("System error"), QString("hi"));
       QApplication::exit(s);
    }
 

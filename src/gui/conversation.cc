@@ -120,6 +120,7 @@ namespace OpenAxiom {
       setBackgroundRole(QPalette::Base);
       greetings.setFont(font());
       setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+      fileName="";
    }
 
    Conversation::~Conversation() {
@@ -416,7 +417,8 @@ namespace OpenAxiom {
    }
 
    void Conversation::open_file() {
-       QString fn = QFileDialog::getOpenFileName(this,tr("Open Worksheet"),"",tr("open-axiom (*.oa);;html (*.html)"));
+       QString fn = QFileDialog::getOpenFileName(this,tr("Open Worksheet"),"",
+                                                 tr("open-axiom (*.oa);;html (*.html)"));
        if (fn.isEmpty()) return;
        QFile f( fn );
        if (f.open(QFile::ReadOnly)) {
@@ -449,12 +451,39 @@ namespace OpenAxiom {
                }
            }
            f.close();
+           fileName = fn;
        } else
            QMessageBox::information(0, "error", f.errorString());
    }
 
+   bool Conversation::maybeSave() {
+       bool modified = false;
+       for (auto i=0;i<length();i++) {
+           if (children[i]->question()->document()->isModified()) {
+               modified = true;
+               break;
+           }
+       }
+       if (not modified) return true;
+
+       if (fileName.startsWith(QLatin1String(":/")))
+           return true;
+       QMessageBox::StandardButton ret;
+       ret = QMessageBox::warning(this, tr("Application"),
+                                  tr("The document has been modified.\n"
+                                     "Do you want to save your changes?"),
+                                  QMessageBox::Save | QMessageBox::Discard
+                                  | QMessageBox::Cancel);
+       if (ret == QMessageBox::Save) {
+           save_file();
+           return true;
+       } else if (ret == QMessageBox::Cancel)
+           return false;
+       return true;
+    }
+
    void Conversation::save_file() {
-       QString fn = QFileDialog::getSaveFileName(this,tr("Save Worksheet"),"untitled.oa",tr("open-axiom (*.oa);;html (*.html)"));
+       QString fn = QFileDialog::getSaveFileName(this,tr("Save Worksheet"),fileName,tr("open-axiom (*.oa);;html (*.html)"));
        if (fn.isEmpty()) return;
        QFile f( fn );
        if (f.open(QFile::WriteOnly | QFile::Truncate)) {

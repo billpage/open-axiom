@@ -41,29 +41,32 @@
 #include "latexthread.h"
 
 namespace OpenAxiom {
-   // -- Main application window --
-   class MainWindow : public QMainWindow {
-      Q_OBJECT;
-   public:
-      MainWindow(int, char*[]);
-      ~MainWindow();
+// -- Main application window --
+class MainWindow : public QMainWindow {
+    Q_OBJECT;
+public:
+    MainWindow(int, char*[]);
+    ~MainWindow();
 
-      Server* server() { return &srv; }
-      LatexThread* latexthread;
+    Server* server() { return &srv; }
+    LatexThread* latexthread;
 
-   public slots:
+public slots:
 
-   private slots:
-      void done(int, QProcess::ExitStatus);
-      void display_error(QString);
-      void display_error();
+private slots:
+    void done(int, QProcess::ExitStatus);
+    void display_error(QString);
+    void display_error();
 
-   private:
-      Server srv;
-      Debate *debate;
-      Conversation *conv;
-      QTabWidget tabs;
-   };
+protected:
+    void closeEvent(QCloseEvent *event);
+
+private:
+    Server srv;
+    Debate *debate;
+    Conversation *conv;
+    QTabWidget tabs;
+};
 }
 
 

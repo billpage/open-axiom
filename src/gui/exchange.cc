@@ -108,6 +108,8 @@ namespace OpenAxiom {
       setStyleSheet("* { border-style: solid hidden hidden solid; border-width: 1px; border-color:gray;}");
       setFont(e->font());
       setReadOnly(false);
+      //setOpenExternalLinks(true);
+      setOpenLinks(true);
       setAcceptRichText(true);
       setViewportMargins(0, 0, 0, 0);
       setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding);
@@ -128,7 +130,7 @@ namespace OpenAxiom {
    }
 
    void Question::click_link(QUrl url) {
-       qDebug()<< url;
+       qDebug()<< "link:" << url.toString();
    }
 
    void Question::showContextMenu(const QPoint &pt)

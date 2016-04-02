@@ -78,7 +78,6 @@ namespace OpenAxiom {
 
       // Number of exchanges in this conversation
       int length() const { return children.size(); }
-
       // Return the `i'-th conversation in this set, if any.
       Exchange* operator[](int) const;
       // Return a pointer to the current exchange, if any.
@@ -117,6 +116,8 @@ namespace OpenAxiom {
       QComboBox* style;
       QFontComboBox* fontName;
       QTemporaryFile tmpSPAD;
+      bool maybeSave();
+      //void setCurrentFileName(const QString &fileN);
 
    public slots:
       // Return the topic following a given topic in this set of conversations
@@ -141,7 +142,6 @@ namespace OpenAxiom {
 
    protected:
       void resizeEvent(QResizeEvent*);
-      //void paintEvent(QPaintEvent*);
 
    private:
       typedef std::vector<Exchange*> Children;
@@ -149,17 +149,13 @@ namespace OpenAxiom {
       Banner greetings;
       Children children;
       Exchange* cur_ex;
-      // = exchange()->answer()
       OutputTextArea* cur_out;
       QRegExp rx;
       QRegExp tx;
       QRegExp dd;
 
-      KLFBackend::klfSettings settings;
-      KLFBackend::klfInput input;
-      KLFBackend::klfOutput output;
-
       FileDownloader* fetch;
+      QString fileName;
    };
 }
 

@@ -43,6 +43,8 @@ TEMPLATE = app
 QT += core gui
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
+QT += network
+
 ## Put the executable directly in the staged bin directory.
 DESTDIR = @top_builddir@/@target@/bin
 TARGET = open-axiom

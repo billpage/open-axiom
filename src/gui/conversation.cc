@@ -120,7 +120,7 @@ namespace OpenAxiom {
       setBackgroundRole(QPalette::Base);
       greetings.setFont(font());
       setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
-      fileName="";
+      currentFileName="";
    }
 
    Conversation::~Conversation() {
@@ -130,7 +130,7 @@ namespace OpenAxiom {
 
    QPoint Conversation::bottom_left() const {
       if (length() == 0)
-         return greetings.geometry().bottomLeft();
+         return QPoint(0,greetings.geometry().bottomLeft().y());
       return children.back()->geometry().bottomLeft();
    }
 
@@ -161,7 +161,8 @@ namespace OpenAxiom {
    }
 
    void Conversation::resize_me2(QSize sz) {
-       greetings.resize(sz.width(), greetings.height());
+       greetings.resize(minimum_preferred_size(this).width(), greetings.height());
+       greetings.move((sz.width() - greetings.size().width())/2,greetings.y());
        for (int i = 0; i < length(); ++i) {
           Exchange* e = children[i];
           e->resize(sz.width(), e->height());
@@ -417,43 +418,45 @@ namespace OpenAxiom {
    }
 
    void Conversation::open_file() {
-       QString fn = QFileDialog::getOpenFileName(this,tr("Open Worksheet"),"",
-                                                 tr("open-axiom (*.oa);;html (*.html)"));
-       if (fn.isEmpty()) return;
-       QFile f( fn );
-       if (f.open(QFile::ReadOnly)) {
-           QString buf = f.readAll();
-           // We aren't interested in class="open-axiom-banner".
-           QRegExp ques("<div class=\"(open-axiom-question|open-axiom-comment)\">\\n"
-                        "((<p .*>.*</p>\\n|<table .*>.*</table>\\n|<ol .*>.*</ol>\\n)+)"
-                        "</div>");
-           ques.setMinimal(true);
-           QRegExp ans("<div class=\"open-axiom-answer\">\\n(<p .*>.*</p>)\\n</div>");
-           ans.setMinimal(true);
-           int pos = 0;
-           while ((pos = ques.indexIn(buf,pos)) != -1) {
-               exchange()->question()->setHtml(ques.cap(2));
-               pos += ques.matchedLength();
-               if (ques.cap(1)=="question") {
-               if ((pos = ans.indexIn(buf,pos)) != -1) {
-                   cur_out->setHtml(ans.cap(1));
-                   pos += ans.matchedLength();
-                   cur_out->show();
-                   cur_out->resize(cur_out->document()->size().width(),cur_out->document()->size().height());
+       if (maybeSave()) {
+           QString fn = QFileDialog::getOpenFileName(this,tr("Open Worksheet"),"",
+                                                     tr("open-axiom (*.oa);;html (*.html)"));
+           if (fn.isEmpty()) return;
+           QFile f( fn );
+           if (f.open(QFile::ReadOnly)) {
+               QString buf = f.readAll();
+               // We aren't interested in class="open-axiom-banner".
+               QRegExp ques("<div class=\"(open-axiom-question|open-axiom-comment)\">\\n"
+                            "((<p .*>.*</p>\\n|<table .*>.*</table>\\n|<ol .*>.*</ol>\\n)+)"
+                            "</div>");
+               ques.setMinimal(true);
+               QRegExp ans("<div class=\"open-axiom-answer\">\\n(<p .*>.*</p>)\\n</div>");
+               ans.setMinimal(true);
+               int pos = 0;
+               while ((pos = ques.indexIn(buf,pos)) != -1) {
+                   exchange()->question()->setHtml(ques.cap(2));
+                   pos += ques.matchedLength();
+                   if (ques.cap(1)=="open-axiom-question") {
+                       if ((pos = ans.indexIn(buf,pos)) != -1) {
+                           cur_out->setHtml(ans.cap(1));
+                           pos += ans.matchedLength();
+                           cur_out->show();
+                           cur_out->resize(cur_out->document()->size().width(),cur_out->document()->size().height());
+                       }
+                       exchange()->setStyleSheet("* { background-color: transparent; }");
+                       exchange()->question()->setStyleSheet(
+                                   "* { border-style: solid hidden hidden solid; border-width: 1px; border-color:lightgray;}");
+                       exchange()->adjustSize();
+                       ensure_visibility(next());
+                   } else {
+                       only_comment();
+                   }
                }
-               exchange()->setStyleSheet("* { background-color: transparent; }");
-               exchange()->question()->setStyleSheet(
-                           "* { border-style: solid hidden hidden solid; border-width: 1px; border-color:lightgray;}");
-               exchange()->adjustSize();
-               ensure_visibility(next());
-               } else {
-                   only_comment();
-               }
-           }
-           f.close();
-           fileName = fn;
-       } else
-           QMessageBox::information(0, "error", f.errorString());
+               f.close();
+               currentFileName = fn;
+           } else
+               QMessageBox::information(0, "error", f.errorString());
+       }
    }
 
    bool Conversation::maybeSave() {
@@ -466,13 +469,13 @@ namespace OpenAxiom {
        }
        if (not modified) return true;
 
-       if (fileName.startsWith(QLatin1String(":/")))
+       if (currentFileName.startsWith(QLatin1String(":/")))
            return true;
        QMessageBox::StandardButton ret;
-       ret = QMessageBox::warning(this, tr("Application"),
+       ret = QMessageBox::warning(this, tr("Worksheet"),
                                   tr("The document has been modified.\n"
                                      "Do you want to save your changes?"),
-                                  QMessageBox::Save | QMessageBox::Discard
+                                  QMessageBox::Save | QMessageBox::No
                                   | QMessageBox::Cancel);
        if (ret == QMessageBox::Save) {
            save_file();
@@ -483,7 +486,7 @@ namespace OpenAxiom {
     }
 
    void Conversation::save_file() {
-       QString fn = QFileDialog::getSaveFileName(this,tr("Save Worksheet"),fileName,tr("open-axiom (*.oa);;html (*.html)"));
+       QString fn = QFileDialog::getSaveFileName(this,tr("Save Worksheet"),currentFileName,tr("open-axiom (*.oa);;html (*.html)"));
        if (fn.isEmpty()) return;
        QFile f( fn );
        if (f.open(QFile::WriteOnly | QFile::Truncate)) {
@@ -554,17 +557,19 @@ namespace OpenAxiom {
    }
 
    void Conversation::download_html() {
-
-       QUrl url;
-       do {
-           bool ok = true;
-           url = QUrl::fromUserInput(QInputDialog::getText(this, tr("Fetch from URL"), tr("Enter URL:"), QLineEdit::Normal, QString(), &ok));
-           if (!ok) return;
-       } while (!url.isValid());
-       qDebug()<<url;
-       fetch = new FileDownloader(url, this);
-       connect(fetch, SIGNAL (downloaded()), this, SLOT (load_html()));
-       QApplication::setOverrideCursor(Qt::WaitCursor);
+       if (maybeSave()) {
+           QUrl url;
+           do {
+               bool ok = true;
+               url = QUrl::fromUserInput(QInputDialog::getText(this, tr("Fetch from URL"),
+                                                               tr("Enter URL:"), QLineEdit::Normal, QString(), &ok));
+               if (!ok) return;
+           } while (!url.isValid());
+           qDebug()<<url;
+           fetch = new FileDownloader(url, this);
+           connect(fetch, SIGNAL (downloaded()), this, SLOT (load_html()));
+           QApplication::setOverrideCursor(Qt::WaitCursor);
+       }
    }
 
    void Conversation::load_html() {
@@ -574,8 +579,10 @@ namespace OpenAxiom {
            auto buf = fetch->downloadedData();
            if (not buf.isEmpty()) {
                qDebug() << "MimeType"<<fetch->mimeType();
-               if (fetch->mimeType()=="text/plain; charset=UTF-8") exchange()->question()->setPlainText(buf);
-               else exchange()->question()->setHtml(buf);
+               if (fetch->mimeType()=="text/plain; charset=UTF-8") {
+                   exchange()->question()->setPlainText(buf);
+                   exchange()->question()->document()->setModified(true);
+               } else exchange()->question()->setHtml(buf);
                exchange()->adjustSize();
                ensure_visibility(next());
            }

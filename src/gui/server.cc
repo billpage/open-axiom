@@ -66,6 +66,7 @@ namespace OpenAxiom {
       args << "--" << "--role=server";
       for (int i = 1; i < cmd.core.argc; ++i)
          args << cmd.core.argv[i];
+      //start("fricas -nosman");
       start(make_path_for(cmd.root_dir, Driver::core), args);
    }
 }

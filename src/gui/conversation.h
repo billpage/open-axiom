@@ -155,7 +155,7 @@ namespace OpenAxiom {
       QRegExp dd;
 
       FileDownloader* fetch;
-      QString fileName;
+      QString currentFileName;
    };
 }
 

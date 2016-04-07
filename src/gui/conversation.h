@@ -137,6 +137,8 @@ namespace OpenAxiom {
    private slots:
       void read_reply();
       void send_query();
+      void execute_one();
+      void execute_all();
       void only_comment();
       void load_html();
 

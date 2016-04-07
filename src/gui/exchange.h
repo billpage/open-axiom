@@ -81,10 +81,10 @@ namespace OpenAxiom {
        void dontEvaluate();
 
    private slots:
-       void dirtyText();
        void click_link(QUrl url);
 
    public slots:
+       void dirtyText();
        void showContextMenu(const QPoint &pt);
        void insert_list();
        void insert_table();

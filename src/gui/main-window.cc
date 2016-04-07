@@ -94,7 +94,7 @@ namespace OpenAxiom {
       menu->addAction(action);
       connect(action, SIGNAL(triggered()), debate->conversation(), SLOT(write_file()));
       menu->addSeparator();
-      action = new QAction(tr("Download HTML"), this);
+      action = new QAction(tr("Import Wiki"), this);
       //action->setShortcut(tr("Ctrl+R"));
       menu->addAction(action);
       connect(action, SIGNAL(triggered()), debate->conversation(), SLOT(download_html()));
@@ -116,13 +116,13 @@ namespace OpenAxiom {
       action = new QAction(tr("Execute Selection"), this);
       action->setShortcut(QKeySequence(Qt::Key_Return + Qt::SHIFT));
       menu->addAction(action);
-      connect(action, SIGNAL(triggered()), debate->conversation(), SLOT(send_query()));
+      connect(action, SIGNAL(triggered()), debate->conversation(), SLOT(execute_one()));
 
       action = new QAction(tr("Execute All"), this);
       action->setShortcut(tr("Ctrl+A"));
       menu->addAction(action);
       // Fix this
-      connect(action, SIGNAL(triggered()), debate->conversation(), SLOT(send_query()));
+      connect(action, SIGNAL(triggered()), debate->conversation(), SLOT(execute_all()));
 
       menu = menuBar()->addMenu(tr("&Edit"));
       conv->undo = new QAction(tr("&Undo"), this);
@@ -265,8 +265,8 @@ namespace OpenAxiom {
       connect(server(), SIGNAL(finished(int,QProcess::ExitStatus)), this, SLOT(done(int,QProcess::ExitStatus)));
       connect(server(), SIGNAL(readyReadStandardError()), this, SLOT(display_error()));
       connect(server(), SIGNAL(readyReadStandardOutput()), debate->conversation(), SLOT(read_reply()));
-      // Why this?
-      //read_databases();
+      // Sync and process initial commands
+      server()->input(")version");
       server()->input(")read init.input )quiet");
    }
 

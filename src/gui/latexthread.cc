@@ -13,6 +13,8 @@ LatexThread::LatexThread() {
                               \\multicolumn{1}{|c}{#2}\\end{array}}");
     // Not sure why the following is necessary when running outside of Qt Creator.
     settings.execenv = {"TEXINPUTS=/usr/share/texmf//:"};
+    settings.epstopdfexec = ""; // no pdf
+    settings.outlineFonts = false;
 }
 
 LatexThread::~LatexThread() {

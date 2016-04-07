@@ -48,6 +48,7 @@
 #include <QFileDialog>
 #include <QInputDialog>
 #include <QMenu>
+#include <QTextCodec>
 #include "conversation.h"
 #include "debate.h"
 #include "latexthread.h"
@@ -194,14 +195,41 @@ namespace OpenAxiom {
       QApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
    }
 
+   void Conversation::execute_one() {
+       send_query();
+       QApplication::processEvents(QEventLoop::WaitForMoreEvents,100);
+       for (auto i=cur_ex->number();i<length()-1;i++) {
+           cur_ex = children[i];
+           if (not cur_ex->answer()->isHidden()) {
+               cur_ex->question()->setFocus();
+               break;
+           }
+       }
+       QApplication::restoreOverrideCursor();
+   }
+
+   void Conversation::execute_all() {
+       qDebug()<<"execute_all"<<length();
+       for (auto i=0;i<length()-1;i++) {
+           cur_ex = children[i];
+           if (not cur_ex->answer()->isHidden() and not empty_string(exchange()->question()->toPlainText())) {
+               cur_ex->question()->setFocus();
+               send_query();
+               QApplication::processEvents(QEventLoop::WaitForMoreEvents,100);
+           }
+       }
+       QApplication::restoreOverrideCursor();
+   }
+
    void Conversation::ensure_visibility(Exchange* e) {
-      const int y = e->y() + e->height();
+      const int y_bot = e->y();
+      const int y_top = y_bot + e->height();
       QScrollBar* vbar = debate->verticalScrollBar();
-      const int value = vbar->value();
-      int new_value = y - vbar->pageStep();
-      if (y < value)
-         vbar->setValue(std::max(new_value, 0));
-      else if (new_value > value)
+      const int current_value = vbar->value();
+      int new_value = y_top - vbar->pageStep();
+      if (y_bot < current_value)
+         vbar->setValue(std::max(y_bot, 0));
+      else if (new_value > current_value)
          vbar->setValue(std::min(new_value, vbar->maximum()));
       e->question()->setFocus(Qt::OtherFocusReason);
    }
@@ -274,9 +302,14 @@ namespace OpenAxiom {
    }
 
    Exchange* Conversation::nth_topic(int n) {
-       if (n<1) return children[0];
-       if (n>length()) return children[length()-1];
-       return children[n-1];
+       qDebug()<<"nth_topic"<<n;
+       Exchange* w;
+       if (n<1) w = children[0];
+       else if (n>length()) w = children[length()-1];
+       else w = children[n-1];
+       ensure_visibility(w);
+       cur_out = w->answer();
+       return cur_ex = w;
    }
 
    // reposition all the older children
@@ -364,7 +397,7 @@ namespace OpenAxiom {
            type = "";
        }
        // Make sure we're done
-       QApplication::processEvents();
+       QApplication::processEvents(QEventLoop::WaitForMoreEvents,100);
        cur_out->show();
        cur_out->resize(cur_out->document()->size().width(),cur_out->document()->size().height());
        if (length() == 0) {
@@ -561,8 +594,9 @@ namespace OpenAxiom {
            QUrl url;
            do {
                bool ok = true;
-               url = QUrl::fromUserInput(QInputDialog::getText(this, tr("Fetch from URL"),
-                                                               tr("Enter URL:"), QLineEdit::Normal, QString(), &ok));
+               url = QUrl::fromUserInput(
+                           QInputDialog::getText(this, tr("Fetch from URL"),
+                                                 tr("Enter URL:"), QLineEdit::Normal, QString(), &ok)+"/src");
                if (!ok) return;
            } while (!url.isValid());
            qDebug()<<url;
@@ -572,19 +606,46 @@ namespace OpenAxiom {
        }
    }
 
+   QString structuredText(QString s) {
+       s = s.replace(" \n","\n"); s = s.replace("\r","");
+       QRegExp links("\"(.*)\":(http://.*)\\n"); links.setMinimal(true);
+       s = s.replace(links,"<a href=\"\\2\">\\1</a>\n");
+       QRegExp paragraphs("(.*)\\n\\n"); paragraphs.setMinimal(true);
+       s += "\n\n";
+       s = s.replace(paragraphs,"<p>\\1</p>\n");
+       // Substitute inline LaTeX?
+
+       qDebug()<<s;
+       return s;
+   }
+
    void Conversation::load_html() {
        QApplication::restoreOverrideCursor();
        if (fetch->error()) QMessageBox::critical(0, "error",fetch->errorString());
        else {
-           auto buf = fetch->downloadedData();
+           auto buf = QTextCodec::codecForMib(106)->toUnicode(fetch->downloadedData());
            if (not buf.isEmpty()) {
                qDebug() << "MimeType"<<fetch->mimeType();
-               if (fetch->mimeType()=="text/plain; charset=UTF-8") {
-                   exchange()->question()->setPlainText(buf);
+
+               QRegExp axiom("(.*)\\\\begin\\{axiom\\}\\n"
+                             "(.*)\\n"
+                             "\\\\end\\{axiom\\}");
+               axiom.setMinimal(true);
+               int pos = 0;
+               while ((pos = axiom.indexIn(buf,pos)) != -1) {
+                   qDebug()<<"at"<<pos;
+                   if (not axiom.cap(1).isEmpty()) {
+                       exchange()->question()->setHtml(structuredText(axiom.cap(1)));
+                       only_comment();
+                   }
+                   exchange()->question()->setPlainText(axiom.cap(2));
                    exchange()->question()->document()->setModified(true);
-               } else exchange()->question()->setHtml(buf);
-               exchange()->adjustSize();
-               ensure_visibility(next());
+                   exchange()->question()->dirtyText();
+                   pos += axiom.matchedLength();
+                   exchange()->answer()->show();
+                   exchange()->adjustSize();
+                   ensure_visibility(next());
+               }
            }
        }
    }

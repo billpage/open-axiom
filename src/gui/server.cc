@@ -67,6 +67,9 @@ namespace OpenAxiom {
       for (int i = 1; i < cmd.core.argc; ++i)
          args << cmd.core.argv[i];
       //start("fricas -nosman");
-      start(make_path_for(cmd.root_dir, Driver::core), args);
+      //start("open-axiom --no-server");
+      qDebug()<<args[args.length()-1];
+      start(args[args.length()-1]);
+      //start(make_path_for(cmd.root_dir, Driver::core), args);
    }
 }

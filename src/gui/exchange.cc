@@ -260,7 +260,7 @@ namespace OpenAxiom {
 
    void Question::jump(int n) {
        Question* ques = conv->nth_topic(exch->number()+n)->question();
-       ques->setFocus();
+       //ques->setFocus();
        if (n>0) ques->moveCursor(QTextCursor::Start);
        if (n<0) ques->moveCursor(QTextCursor::End);
    }
